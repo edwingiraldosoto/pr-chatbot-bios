@@ -44,12 +44,12 @@ referencian sus tareas (`feat(index): … [T-14, T-15]`).
 
 **Propósito**: convertir la carpeta en fragmentos con metadatos.
 
-- [ ] T-06 [US6] Descubrimiento de archivos: recursivo, filtros de ocultos, `~$*` y extensiones no soportadas, huella SHA-256 — `src/mesa_ayuda/ingest/discovery.py`, `tests/unit/test_discovery.py` — RF-01 (CA-01.3)
-- [ ] T-07 [P] [US1] Lectores `.md` (secciones por encabezado) y `.txt` (UTF-8 → cp1252) — `src/mesa_ayuda/ingest/loaders.py`, `tests/unit/test_loaders.py` — RF-01 (CA-01.1, CA-01.2)
-- [ ] T-08 [P] [US1] Lector `.pdf` por página; sin texto extraíble → ilegible — `src/mesa_ayuda/ingest/loaders.py`, `tests/unit/test_loaders.py` — RF-01 (CA-01.4)
-- [ ] T-09 [P] [US1] Lector `.docx` con secciones por estilo de título — `src/mesa_ayuda/ingest/loaders.py`, `tests/unit/test_loaders.py` — RF-01 (deseable)
-- [ ] T-10 [US1] Fragmentador jerárquico (sección → párrafo → oración → caracteres) con solapamiento y encabezado antepuesto — `src/mesa_ayuda/ingest/chunker.py`, `tests/unit/test_chunker.py` — RF-02 (CA-02.1–CA-02.3)
-- [ ] T-11 [P] Documentos de ejemplo de una empresa ficticia (vacaciones `.md`, reembolsos `.pdf`, soporte TI `.docx`, trabajo remoto `.txt`) con datos concretos y verificables; fixtures de prueba (corrupto, cp1252, `~$`) — `knowledge_base/`, `tests/fixtures/` — sección 8 del enunciado
+- [x] T-06 [US6] Descubrimiento de archivos: recursivo, filtros de ocultos, `~$*` y extensiones no soportadas, huella SHA-256 — `src/mesa_ayuda/ingest/discovery.py`, `tests/unit/test_discovery.py` — RF-01 (CA-01.3)
+- [x] T-07 [P] [US1] Lectores `.md` (secciones por encabezado) y `.txt` (UTF-8 → cp1252) — `src/mesa_ayuda/ingest/loaders.py`, `tests/unit/test_loaders.py` — RF-01 (CA-01.1, CA-01.2)
+- [x] T-08 [P] [US1] Lector `.pdf` por página; sin texto extraíble → ilegible — `src/mesa_ayuda/ingest/loaders.py`, `tests/unit/test_loaders.py` — RF-01 (CA-01.4)
+- [x] T-09 [P] [US1] Lector `.docx` con secciones por estilo de título — `src/mesa_ayuda/ingest/loaders.py`, `tests/unit/test_loaders.py` — RF-01 (deseable)
+- [x] T-10 [US1] Fragmentador jerárquico (sección → párrafo → línea → oración → palabra → caracteres) con solapamiento y encabezado antepuesto — `src/mesa_ayuda/ingest/chunker.py`, `tests/unit/test_chunker.py` — RF-02 (CA-02.1–CA-02.3)
+- [x] T-11 [P] Documentos de ejemplo de una empresa ficticia (vacaciones `.md`, reembolsos `.pdf`, soporte TI `.docx`, trabajo remoto `.txt`) con datos concretos y verificables; fixtures de prueba (corrupto, cp1252, `~$`) — `knowledge_base/`, `tests/fixtures/` — sección 8 del enunciado
 
 **Punto de control**: los 4 documentos de ejemplo producen fragmentos con fuente, sección y página.
 
@@ -175,17 +175,17 @@ Estado al momento de la entrega (se actualiza al cerrar cada fase).
 
 | Tarea | Requisitos | Fase | Estado | Commit |
 |---|---|---|---|---|
-| T-01 | RNF-07 | S2 | Terminada | — |
-| T-02 | RNF-01 | S2 | Terminada | — |
-| T-03 | RNF-01 | S2 | Terminada | — |
-| T-04 | RNF-03, RNF-06 | S2 | Terminada | — |
-| T-05 | RF-03, RF-04, RF-12, RNF-04 | S2 | Terminada | — |
-| T-06 | RF-01 | S3 | Pendiente | — |
-| T-07 | RF-01 | S3 | Pendiente | — |
-| T-08 | RF-01 | S3 | Pendiente | — |
-| T-09 | RF-01 | S3 | Pendiente | — |
-| T-10 | RF-02 | S3 | Pendiente | — |
-| T-11 | Enunciado §8 | S3 | Pendiente | — |
+| T-01 | RNF-07 | S2 | Terminada | `ad9b751` |
+| T-02 | RNF-01 | S2 | Terminada | `e2b438d`, `975e310` |
+| T-03 | RNF-01 | S2 | Terminada | `e2b438d` |
+| T-04 | RNF-03, RNF-06 | S2 | Terminada | `e2b438d`, `f318340` |
+| T-05 | RF-03, RF-04, RF-12, RNF-04 | S2 | Terminada | `e2b438d` |
+| T-06 | RF-01 | S3 | Terminada | `b20237a` |
+| T-07 | RF-01 | S3 | Terminada | `ae9ac82` |
+| T-08 | RF-01 | S3 | Terminada | `7729028` |
+| T-09 | RF-01 | S3 | Terminada | `aa4c9a3` |
+| T-10 | RF-02 | S3 | Terminada | `df82086` |
+| T-11 | Enunciado §8 | S3 | Terminada | `ae8f903` |
 | T-12 | RF-02 | S4 | Pendiente | — |
 | T-13 | RF-02 | S4 | Pendiente | — |
 | T-14 | RF-09 | S4 | Pendiente | — |

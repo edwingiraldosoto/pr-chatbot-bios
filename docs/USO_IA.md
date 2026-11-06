@@ -73,3 +73,46 @@ secciones con 1–2 commits por sección después de probar cada una.
   con la configuración por defecto de pydantic; se decidió rechazarla con un error.
 - Pruebas que verifican la coherencia entre código, `config.yaml` y `.env.example`, para
   que agregar un parámetro sin documentarlo haga fallar la suite.
+
+### 2026-11-06 — Revisión independiente contra la rúbrica
+
+Le pedí a la herramienta lanzar un agente evaluador nuevo, sin el contexto de la
+conversación, para que revisara el repositorio contra la rúbrica del enunciado y corriera
+la verificación por su cuenta. Resultados que acepté y apliqué:
+
+- **Commits**: la regla "1–2 commits por sección" chocaba con el criterio "commits pequeños
+  y atómicos". Cambié a un commit por tarea, hecho solo con la sección completa probada
+  (enmienda 1.1.0 de la constitución). S0–S2 quedan como están: no reescribo historial.
+- **Bug real en la redacción de secretos**: el patrón del token usaba `\b`, que no corta
+  entre `bot` y el número en `.../bot123:ABC.../getMe`. Un token no configurado (de otro
+  bot) quedaba visible. Mi prueba pasaba porque usaba el token conocido. Corregido, con una
+  prueba de regresión que falla con el código anterior.
+- **Bug real en la configuración**: el `.env` se buscaba en el directorio actual, mientras
+  que las demás rutas se resuelven respecto a `config.yaml`. Corregido, con prueba.
+
+Hallazgos que dejé para su tarea: calibrar el umbral de similitud con datos (T-37/T-38),
+el peso de torch en la instalación (T-12), las decisiones y el costo en la documentación
+final (T-41/T-42).
+
+### 2026-11-06 — Ingesta y fragmentación (S3: T-06 a T-11)
+
+**Documentos de ejemplo generados con IA** (lo pide el enunciado, §8): los cuatro
+documentos de `knowledge_base/` (empresa ficticia Nubeverde S.A.S.) los redactó la
+herramienta con datos concretos y verificables (15 días hábiles, tope de $60.000 diarios,
+prioridades P1–P4, auxilio de $85.000). El PDF y el DOCX se generan con
+`python -m scripts.build_sample_docs`, para que se puedan reproducir. Para el PDF se
+escribió un generador mínimo (`scripts/simple_pdf.py`) en lugar de agregar reportlab como
+dependencia solo para eso.
+
+**Criterio aplicado a lo generado**:
+- Al imprimir los fragmentos reales del PDF aparecieron dos defectos que las pruebas no
+  cubrían: (1) el texto de un PDF no trae líneas en blanco, así que el fragmentador pasaba
+  directo de párrafo a oración y pegaba las líneas; (2) "3. GASTOS" se tomaba como fin de
+  oración. Se agregó el nivel "línea" al corte jerárquico y se excluyó el punto precedido
+  de dígito. Revisar la salida real, no solo las pruebas, fue lo que lo detectó.
+- Al solapar fragmentos, el texto repetido se unía con un espacio al párrafo siguiente y
+  mezclaba temas en una línea ("…equipos. HORARIO El horario…"). Corregido.
+- Pruebas de mutación manuales: rompí a propósito el límite de tamaño (51 pruebas fallaron)
+  y el separador después del solapamiento (ninguna falló). Escribí la prueba que faltaba.
+- Las pruebas de tamaño y solapamiento usan textos aleatorios con semilla fija (200+ casos)
+  en lugar de ejemplos escritos a mano.
