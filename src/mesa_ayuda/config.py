@@ -340,8 +340,10 @@ def load_settings(
     Args:
         config_path: ruta de ``config.yaml``. Las rutas relativas que contiene se resuelven
             respecto a la carpeta de este archivo.
-        env_file: ruta del ``.env``; ``None`` para no leer ninguno (pruebas). Si no existe,
-            se usan solo las variables de entorno.
+        env_file: ruta del ``.env``; ``None`` para no leer ninguno (pruebas). Una ruta
+            relativa se toma respecto a la carpeta de ``config.yaml``, igual que las demás,
+            para que el resultado no dependa del directorio desde el que se lanza el bot.
+            Si no existe, se usan solo las variables de entorno.
 
     Returns:
         La configuración validada, con rutas absolutas.
@@ -350,6 +352,8 @@ def load_settings(
         ConfigError: si falta un secreto, un valor es inválido o un archivo de prompt no existe.
     """
     config_path = Path(config_path).resolve()
+    if env_file is not None and not Path(env_file).is_absolute():
+        env_file = config_path.parent / env_file
     yaml_values = _read_yaml(config_path)
     try:
         with _yaml_context(yaml_values):

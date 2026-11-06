@@ -209,6 +209,21 @@ def test_relative_paths_resolve_against_config_dir(
     assert settings.data_dir == (config_dir / "data").resolve()
 
 
+def test_relative_env_file_is_read_next_to_config_yaml(
+    config_dir: Path, monkeypatch: pytest.MonkeyPatch, tmp_path_factory: pytest.TempPathFactory
+) -> None:
+    # Regresión: el .env se buscaba en el directorio actual y no junto a config.yaml.
+    (config_dir / ".env").write_text(
+        "TELEGRAM_BOT_TOKEN=111111:from-dotenv-file-value\nLLM_API_KEY=key-from-dotenv\n",
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(tmp_path_factory.mktemp("otro_directorio"))
+
+    settings = load_settings(config_dir / "config.yaml")
+
+    assert settings.llm_api_key.get_secret_value() == "key-from-dotenv"
+
+
 def test_missing_prompt_file_is_reported(config_dir: Path, secrets_env: dict[str, str]) -> None:
     path = write_yaml(config_dir, {"prompts": {"system_prompt_path": "./no_existe.md"}})
 
