@@ -11,6 +11,7 @@ from mesa_ayuda.ingest.loaders import (
     decode_text,
     load_document,
 )
+from scripts.simple_pdf import write_pdf
 
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures"
 
@@ -91,3 +92,31 @@ def test_empty_text_file_is_unreadable(tmp_path: Path, content: bytes) -> None:
 
     with pytest.raises(UnreadableDocumentError, match="no tiene texto"):
         load_document(path)
+
+
+# --- PDF ------------------------------------------------------------------------------------
+
+
+def test_pdf_has_one_section_per_page() -> None:
+    sections = load_document(FIXTURES / "dos_paginas.pdf")
+
+    assert [s.page for s in sections] == [1, 2]
+    assert "anticipo es del 70 %" in sections[0].text
+    assert "30 días (calendario)" in sections[1].text
+
+
+def test_pdf_skips_blank_pages(tmp_path: Path) -> None:
+    path = tmp_path / "con_blanco.pdf"
+    write_pdf(path, ["Página con texto", "   ", "Tercera página"])
+
+    assert [s.page for s in load_document(path)] == [1, 3]
+
+
+def test_scanned_pdf_without_text_is_unreadable() -> None:
+    with pytest.raises(UnreadableDocumentError, match="escaneado"):
+        load_document(FIXTURES / "escaneado.pdf")
+
+
+def test_corrupt_pdf_is_unreadable() -> None:
+    with pytest.raises(UnreadableDocumentError, match="PDF dañado"):
+        load_document(FIXTURES / "corrupto.pdf")

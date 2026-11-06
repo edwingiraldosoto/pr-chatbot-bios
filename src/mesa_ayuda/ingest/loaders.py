@@ -15,6 +15,8 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
+import pypdf
+
 
 @dataclass(frozen=True)
 class Section:
@@ -115,9 +117,32 @@ def load_text(path: Path) -> list[Section]:
     return _require_text([Section(text=_normalize(decode_text(path.read_bytes())))])
 
 
+def load_pdf(path: Path) -> list[Section]:
+    """Una sección por página con texto; un PDF escaneado (solo imágenes) es ilegible."""
+    try:
+        reader = pypdf.PdfReader(path)
+        if reader.is_encrypted and not reader.decrypt(""):
+            raise UnreadableDocumentError("está protegido con contraseña")
+        sections = [
+            Section(text=_normalize(page.extract_text() or ""), page=number)
+            for number, page in enumerate(reader.pages, start=1)
+        ]
+    except UnreadableDocumentError:
+        raise
+    except Exception as error:
+        # pypdf lanza muchos tipos distintos ante archivos malformados (PyPdfError,
+        # KeyError, struct.error, ...). Un PDF dañado no puede detener la ingesta.
+        raise UnreadableDocumentError(f"PDF dañado ({type(error).__name__})") from error
+    try:
+        return _require_text(sections)
+    except UnreadableDocumentError:
+        raise UnreadableDocumentError("no tiene texto extraíble (¿PDF escaneado?)") from None
+
+
 LOADERS: dict[str, Callable[[Path], list[Section]]] = {
     ".md": load_markdown,
     ".txt": load_text,
+    ".pdf": load_pdf,
 }
 
 

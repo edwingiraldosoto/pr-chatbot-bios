@@ -41,7 +41,7 @@ where = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["src"]
+pythonpath = ["src", "."]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 addopts = "-ra"
@@ -72,6 +72,9 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["D"]
 "scripts/**" = ["D103"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["mesa_ayuda", "scripts"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
