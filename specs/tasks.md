@@ -77,14 +77,14 @@ referencian sus tareas (`feat(index): … [T-14, T-15]`).
 **Prueba independiente**: con el LLM falso, una pregunta relevante devuelve texto + fuentes;
 una irrelevante devuelve "no encontrado" sin llamar al LLM.
 
-- [ ] T-18 [US1] [US2] Recuperación: top-K, similitud = 1 − distancia, umbral — `src/mesa_ayuda/retrieval.py`, `tests/unit/test_retrieval.py` — RF-03, RF-04 (CA-04.1)
-- [ ] T-19 [P] [US1] Construcción del prompt con fragmentos numerados, delimitados y escapados — `src/mesa_ayuda/prompting.py`, `tests/unit/test_prompting.py` — RF-03, RNF-04 (CA-R4.1)
-- [ ] T-20 [P] Interfaz `LLMProvider`, errores unificados, reintentos con espera exponencial, fábrica y `FakeProvider` — `src/mesa_ayuda/llm/base.py`, `src/mesa_ayuda/llm/fake.py`, `tests/unit/test_llm_base.py` — RNF-01, RNF-05 (CA-R5.1, CA-R5.2)
-- [ ] T-21 [P] Adaptador Anthropic; confirmar ID de modelo y precios vigentes en la documentación oficial — `src/mesa_ayuda/llm/anthropic.py` — CA-R1.4
-- [ ] T-22 [P] Adaptador OpenAI con `base_url` para APIs compatibles — `src/mesa_ayuda/llm/openai.py` — CA-R1.4
-- [ ] T-23 [P] Adaptador Gemini (opcional; se omite si compromete el tiempo) — `src/mesa_ayuda/llm/gemini.py` — CA-R1.4
-- [ ] T-24 [US4] Reformulación de preguntas de seguimiento con respaldo si falla — `src/mesa_ayuda/rewriter.py`, `tests/unit/test_rewriter.py` — RF-05 (CA-05.1)
-- [ ] T-25 [US1] [US2] Servicio de respuesta: rechazo previo, `NO_ENCONTRADO`, extracción de `[n]` y citas por código, uso de tokens — `src/mesa_ayuda/answering.py`, `tests/unit/test_answering.py` — RF-03, RF-04 (CA-03.1–CA-03.3, CA-04.2)
+- [x] T-18 [US1] [US2] Recuperación: top-K, similitud = 1 − distancia, umbral — `src/mesa_ayuda/retrieval.py`, `tests/unit/test_retrieval.py` — RF-03, RF-04 (CA-04.1)
+- [x] T-19 [P] [US1] Construcción del prompt con fragmentos numerados, delimitados y escapados — `src/mesa_ayuda/prompting.py`, `tests/unit/test_prompting.py` — RF-03, RNF-04 (CA-R4.1)
+- [x] T-20 [P] Interfaz `LLMProvider`, errores unificados, reintentos con espera exponencial, fábrica y `FakeProvider` — `src/mesa_ayuda/llm/base.py`, `src/mesa_ayuda/llm/fake.py`, `tests/unit/test_llm_base.py` — RNF-01, RNF-05 (CA-R5.1, CA-R5.2)
+- [x] T-21 [P] Adaptador Anthropic; confirmar ID de modelo y precios vigentes en la documentación oficial — `src/mesa_ayuda/llm/anthropic.py`, `tests/unit/test_llm_adapters.py` — CA-R1.4
+- [x] T-22 [P] Adaptador OpenAI con `base_url` para APIs compatibles — `src/mesa_ayuda/llm/openai.py` — CA-R1.4
+- [x] T-23 [P] Adaptador Gemini (opcional; se omite si compromete el tiempo) — `src/mesa_ayuda/llm/gemini.py` — CA-R1.4
+- [x] T-24 [US4] Reformulación de preguntas de seguimiento con respaldo si falla — `src/mesa_ayuda/rewriter.py`, `tests/unit/test_rewriter.py` — RF-05 (CA-05.1)
+- [x] T-25 [US1] [US2] Servicio de respuesta: rechazo previo, `NO_ENCONTRADO`, extracción de `[n]` y citas por código, uso de tokens — `src/mesa_ayuda/answering.py`, `tests/unit/test_answering.py` — RF-03, RF-04 (CA-03.1–CA-03.3, CA-04.2)
 
 **Punto de control**: MVP del motor de respuestas probado sin Telegram.
 
@@ -192,14 +192,14 @@ Estado al momento de la entrega (se actualiza al cerrar cada fase).
 | T-15 | RF-02, RF-09 | S4 | Terminada | `4f06e02` |
 | T-16 | RF-09 | S4 | Terminada | `4f06e02` |
 | T-17 | RF-08 | S4 | Terminada | `01adc2d` |
-| T-18 | RF-03, RF-04 | S5 | Pendiente | — |
-| T-19 | RF-03, RNF-04 | S5 | Pendiente | — |
-| T-20 | RNF-01, RNF-05 | S5 | Pendiente | — |
-| T-21 | RNF-01 | S5 | Pendiente | — |
-| T-22 | RNF-01 | S5 | Pendiente | — |
-| T-23 | RNF-01 | S5 | Pendiente | — |
-| T-24 | RF-05 | S5 | Pendiente | — |
-| T-25 | RF-03, RF-04 | S5 | Pendiente | — |
+| T-18 | RF-03, RF-04 | S5 | Terminada | `193d401` |
+| T-19 | RF-03, RNF-04 | S5 | Terminada | `2bd2465` |
+| T-20 | RNF-01, RNF-05 | S5 | Terminada | `4b148c2`, `cf2612d` (fábrica) |
+| T-21 | RNF-01 | S5 | Terminada | `9182b01` |
+| T-22 | RNF-01 | S5 | Terminada | `ff41121` |
+| T-23 | RNF-01 | S5 | Terminada | `cf2612d`, `a0f25c2` |
+| T-24 | RF-05 | S5 | Terminada | `1e1baa7` |
+| T-25 | RF-03, RF-04 | S5 | Terminada | `604857f` |
 | T-26 | RF-05, RF-10 | S6 | Pendiente | — |
 | T-27 | RF-07, RNF-05 | S6 | Pendiente | — |
 | T-28 | RNF-05, RF-12 | S6 | Pendiente | — |
