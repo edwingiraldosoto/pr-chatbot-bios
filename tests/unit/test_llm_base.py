@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import asyncio
+from pathlib import Path
 
 import pytest
 
+from mesa_ayuda.config import load_settings
 from mesa_ayuda.llm.base import (
     ChatMessage,
     LLMAuthError,
@@ -14,6 +16,7 @@ from mesa_ayuda.llm.base import (
     LLMUnavailableError,
     RetryingProvider,
     TransientLLMError,
+    create_provider,
 )
 from mesa_ayuda.llm.fake import FakeProvider
 
@@ -108,3 +111,47 @@ async def test_fake_records_the_call() -> None:
 
     assert result.text == "S:hola"
     assert fake.calls[0].max_tokens == 7 and fake.calls[0].messages == tuple(MESSAGES)
+
+
+# --- fábrica -------------------------------------------------------------------------------
+
+
+def write_config(tmp_path: Path, provider: str, model: str) -> Path:
+    (tmp_path / "prompts").mkdir()
+    for name in ("system_prompt.md", "rewrite_prompt.md"):
+        (tmp_path / "prompts" / name).write_text("prompt", encoding="utf-8")
+    (tmp_path / ".env").write_text(
+        "TELEGRAM_BOT_TOKEN=123:abc\nLLM_API_KEY=clave-de-prueba\nALLOWED_USER_IDS=1\n",
+        encoding="utf-8",
+    )
+    config = tmp_path / "config.yaml"
+    config.write_text(
+        f"llm:\n  provider: {provider}\n  model: {model}\n"
+        "  timeout_seconds: 12\n  max_retries: 3\n",
+        encoding="utf-8",
+    )
+    return config
+
+
+@pytest.mark.parametrize(
+    ("provider", "model", "adapter"),
+    [
+        ("anthropic", "claude-haiku-5-5", "AnthropicProvider"),
+        ("openai", "gpt-5-mini", "OpenAIProvider"),
+        ("gemini", "gemini-3-flash", "GeminiProvider"),
+    ],
+)
+def test_factory_builds_the_configured_provider(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, provider: str, model: str, adapter: str
+) -> None:
+    # CA-R1.4: el proveedor se cambia solo con configuración.
+    for name in ("LLM_PROVIDER", "LLM_MODEL", "LLM_API_KEY", "TELEGRAM_BOT_TOKEN"):
+        monkeypatch.delenv(name, raising=False)
+    settings = load_settings(write_config(tmp_path, provider, model), env_file=".env")
+
+    built = create_provider(settings)
+
+    assert isinstance(built, RetryingProvider)
+    assert (built.name, built.model) == (provider, model)
+    assert (built.timeout_seconds, built.max_retries) == (12, 3)
+    assert type(built._inner).__name__ == adapter

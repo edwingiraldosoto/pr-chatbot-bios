@@ -18,9 +18,12 @@ import asyncio
 import random
 from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass
-from typing import Literal, Protocol
+from typing import TYPE_CHECKING, Literal, Protocol
 
 from mesa_ayuda.logging_setup import get_logger
+
+if TYPE_CHECKING:
+    from mesa_ayuda.config import Settings
 
 log = get_logger(__name__)
 
@@ -179,3 +182,37 @@ class RetryingProvider:
             except LLMBadRequestError as error:
                 log.error("llm_bad_request", provider=self.name, error=str(error))
                 raise
+
+
+def create_provider(settings: Settings) -> LLMProvider:
+    """Crea el adaptador de ``LLM_PROVIDER`` envuelto con la política de reintentos.
+
+    Raises:
+        LLMBadRequestError: si el proveedor es ``gemini`` y falta el paquete opcional.
+    """
+    api_key = settings.llm_api_key.get_secret_value()
+    inner: LLMProvider
+    if settings.llm_provider == "anthropic":
+        from mesa_ayuda.llm.anthropic import AnthropicProvider
+
+        inner = AnthropicProvider(
+            api_key=api_key, model=settings.llm_model, timeout_seconds=settings.llm_timeout_seconds
+        )
+    elif settings.llm_provider == "openai":
+        from mesa_ayuda.llm.openai import OpenAIProvider
+
+        inner = OpenAIProvider(
+            api_key=api_key,
+            model=settings.llm_model,
+            base_url=settings.llm_base_url,
+            timeout_seconds=settings.llm_timeout_seconds,
+        )
+    else:
+        from mesa_ayuda.llm.gemini import GeminiProvider
+
+        inner = GeminiProvider(
+            api_key=api_key, model=settings.llm_model, timeout_seconds=settings.llm_timeout_seconds
+        )
+    return RetryingProvider(
+        inner, timeout_seconds=settings.llm_timeout_seconds, max_retries=settings.llm_max_retries
+    )

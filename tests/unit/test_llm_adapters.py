@@ -24,6 +24,7 @@ from mesa_ayuda.llm.base import (
     LLMTimeoutError,
     TransientLLMError,
 )
+from mesa_ayuda.llm.gemini import GeminiProvider
 from mesa_ayuda.llm.openai import OpenAIProvider
 
 Handler = Callable[[httpx2.Request], httpx2.Response]
@@ -223,3 +224,79 @@ async def test_openai_compatible_api_uses_max_tokens() -> None:
 async def test_openai_errors_are_translated(handler: Handler, error: type[LLMError]) -> None:
     with pytest.raises(error):
         await call(openai_provider(handler))
+
+
+# --- Gemini --------------------------------------------------------------------------------
+
+GEMINI_OK = {
+    "candidates": [
+        {
+            "content": {"role": "model", "parts": [{"text": "Son 15 días [1]."}]},
+            "finishReason": "STOP",
+        }
+    ],
+    "usageMetadata": {"promptTokenCount": 70, "candidatesTokenCount": 6, "totalTokenCount": 76},
+}
+
+
+class Counting:
+    def __init__(self, handler: Handler) -> None:
+        self.calls = 0
+        self._handler = handler
+
+    def __call__(self, request: httpx2.Request) -> httpx2.Response:
+        self.calls += 1
+        return self._handler(request)
+
+
+def gemini_provider(handler: Handler) -> GeminiProvider:
+    return GeminiProvider(
+        api_key="k",
+        model="gemini-3-flash",
+        timeout_seconds=5,
+        httpx_async_client=httpx2.AsyncClient(transport=httpx2.MockTransport(handler)),
+    )
+
+
+async def test_gemini_request_and_response() -> None:
+    recorder = Recorder(status(200, GEMINI_OK))
+
+    result = await call(gemini_provider(recorder))
+
+    body = recorder.bodies[0]
+    assert [c["role"] for c in body["contents"]] == ["user", "model", "user"]
+    assert body["systemInstruction"]["parts"][0]["text"] == "SISTEMA"
+    assert body["generationConfig"] == {"temperature": 0.1, "maxOutputTokens": 300}
+    assert (result.text, result.input_tokens, result.output_tokens) == ("Son 15 días [1].", 70, 6)
+
+
+@pytest.mark.parametrize(
+    ("code", "error"),
+    [
+        (429, TransientLLMError),
+        (500, TransientLLMError),
+        (403, LLMAuthError),
+        (400, LLMBadRequestError),
+    ],
+)
+async def test_gemini_errors_are_translated(code: int, error: type[LLMError]) -> None:
+    handler = Counting(status(code, {"error": {"code": code, "message": "x", "status": "X"}}))
+
+    with pytest.raises(error):
+        await call(gemini_provider(handler))
+
+    assert handler.calls == 1  # sin reintentos propios del SDK
+
+
+@pytest.mark.parametrize(
+    ("handler", "error"), [(raise_network, TransientLLMError), (raise_timeout, LLMTimeoutError)]
+)
+async def test_gemini_transport_errors_are_translated(
+    handler: Handler, error: type[LLMError]
+) -> None:
+    counting = Counting(handler)
+
+    with pytest.raises(error):
+        await call(gemini_provider(counting))
+
+    assert counting.calls == 1
