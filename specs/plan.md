@@ -123,7 +123,7 @@ flowchart LR
 | `logging_setup.py` | structlog JSON, ID de solicitud, filtro que redacta secretos | RNF-03, RNF-06 |
 | `ingest/loaders.py` | Un lector por formato → lista de `Section` (texto, sección, página) | RF-01 |
 | `ingest/discovery.py` | Recorre la carpeta, filtra ocultos, `~$*`, extensiones no soportadas | RF-01 |
-| `ingest/chunker.py` | Corta por sección → párrafo → oración → tamaño, con solapamiento | RF-02 |
+| `ingest/chunker.py` | Corta por sección → párrafo → línea → oración → palabra → caracteres, con solapamiento | RF-02 |
 | `ingest/injection_check.py` | Patrones de manipulación sobre el texto extraído | RF-13 |
 | `embeddings.py` | Interfaz `Embedder`; implementación local e5 con prefijos `query:`/`passage:` | RF-02 |
 | `vectorstore.py` | Envoltura de Chroma (coseno), filtro por versiones activas | RF-02, RF-09 |
@@ -347,3 +347,4 @@ termina con `pytest`, `ruff` y `mypy` en verde y con 1 o 2 commits.
 | Versión | Fecha | Cambio | Motivo |
 |---|---|---|---|
 | 1.0 | 2026-11-06 | Versión inicial generada con `/speckit-plan`. | — |
+| 1.1 | 2026-11-06 | El fragmentador agrega el nivel "línea" (y "palabra") entre párrafo y oración. | El texto de un PDF no trae líneas en blanco; sin ese nivel las líneas se pegaban (hallado en S3 al revisar fragmentos reales). |

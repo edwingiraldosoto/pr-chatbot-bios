@@ -29,8 +29,11 @@
 ## R-03 — Estrategia de fragmentación
 
 - **Decisión**: corte jerárquico: sección (encabezado Markdown / estilo de título DOCX /
-  página PDF) → párrafo → oración → caracteres, con `CHUNK_SIZE=800` y `CHUNK_OVERLAP=150`
-  caracteres iniciales. El encabezado de la sección se antepone al texto del fragmento.
+  página PDF) → párrafo → línea → oración → palabra → caracteres, con `CHUNK_SIZE=800` y
+  `CHUNK_OVERLAP=150` caracteres iniciales. El encabezado de la sección se antepone al
+  texto del fragmento y cuenta dentro de `CHUNK_SIZE`. El nivel "línea" se agregó en S3:
+  el texto extraído de un PDF no trae líneas en blanco, y sin ese nivel se pasaba directo
+  a cortar oraciones.
 - **Justificación**: las políticas se organizan por secciones cortas; 800 caracteres
   (~150–200 palabras) caben en el límite del modelo de embeddings (512 tokens) con margen,
   y el solapamiento conserva oraciones partidas. Anteponer el encabezado ayuda a la
