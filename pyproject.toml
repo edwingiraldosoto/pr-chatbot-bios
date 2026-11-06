@@ -72,6 +72,8 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["D"]
 "scripts/**" = ["D103"]
+# El texto de los documentos de ejemplo es contenido, no código: cortarlo lo haría ilegible.
+"scripts/build_sample_docs.py" = ["D103", "E501"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["mesa_ayuda", "scripts"]

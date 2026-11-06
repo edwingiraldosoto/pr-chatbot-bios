@@ -15,6 +15,7 @@ from mesa_ayuda.ingest.loaders import (
 from scripts.simple_pdf import write_pdf
 
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures"
+KNOWLEDGE_BASE = Path(__file__).resolve().parents[2] / "knowledge_base"
 
 
 # --- Markdown y texto -----------------------------------------------------------------------
@@ -162,3 +163,30 @@ def test_unsupported_extension_is_unreadable(tmp_path: Path) -> None:
 
     with pytest.raises(UnreadableDocumentError, match="no soportada"):
         load_document(path)
+
+
+# --- Documentos de ejemplo (T-11) -----------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("name", "expected"),
+    [
+        ("politica_vacaciones.md", "15 días hábiles"),
+        ("reembolso_gastos.pdf", "30 días calendario"),
+        ("soporte_ti.docx", "P1 Crítica"),
+        ("trabajo_remoto.txt", "$85.000"),
+    ],
+)
+def test_sample_documents_are_readable(name: str, expected: str) -> None:
+    # CA-01.1: un archivo de cada formato con texto conocido es legible.
+    text = "\n".join(section.text for section in load_document(KNOWLEDGE_BASE / name))
+
+    assert expected in text
+
+
+def test_sample_pdf_cites_page_three() -> None:
+    # El contrato del prompt usa "reembolso_gastos.pdf, página 3" como ejemplo de cita.
+    sections = load_document(KNOWLEDGE_BASE / "reembolso_gastos.pdf")
+
+    [page_three] = [s for s in sections if s.page == 3]
+    assert "Paso 3: Envía la solicitud a más tardar 30 días" in page_three.text.replace("\n", " ")
