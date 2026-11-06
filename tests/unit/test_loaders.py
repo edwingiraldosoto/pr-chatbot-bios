@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import docx
 import pytest
 
 from mesa_ayuda.ingest.loaders import (
@@ -120,3 +121,44 @@ def test_scanned_pdf_without_text_is_unreadable() -> None:
 def test_corrupt_pdf_is_unreadable() -> None:
     with pytest.raises(UnreadableDocumentError, match="PDF dañado"):
         load_document(FIXTURES / "corrupto.pdf")
+
+
+# --- DOCX -----------------------------------------------------------------------------------
+
+
+def test_docx_sections_by_heading_style_and_tables(tmp_path: Path) -> None:
+    document = docx.Document()
+    document.add_heading("Guía de TI", level=0)
+    document.add_paragraph("Texto introductorio.")
+    document.add_heading("Prioridades", level=1)
+    table = document.add_table(rows=2, cols=2)
+    for row, values in zip(table.rows, [("P1", "4 horas"), ("P2", "8 horas")], strict=True):
+        for cell, value in zip(row.cells, values, strict=True):
+            cell.text = value
+    document.add_heading("Contraseña", level=1)
+    document.add_paragraph("Vence cada 90 días.", style="List Bullet")
+    path = tmp_path / "guia.docx"
+    document.save(str(path))
+
+    sections = load_document(path)
+
+    assert [(s.title, s.heading_path) for s in sections] == [
+        ("Guía de TI", ("Guía de TI",)),
+        ("Prioridades", ("Guía de TI", "Prioridades")),
+        ("Contraseña", ("Guía de TI", "Contraseña")),
+    ]
+    assert sections[1].text == "P1 | 4 horas\nP2 | 8 horas"
+    assert sections[2].text == "- Vence cada 90 días."
+
+
+def test_corrupt_docx_is_unreadable() -> None:
+    with pytest.raises(UnreadableDocumentError, match="DOCX dañado"):
+        load_document(FIXTURES / "corrupto.docx")
+
+
+def test_unsupported_extension_is_unreadable(tmp_path: Path) -> None:
+    path = tmp_path / "hoja.xlsx"
+    path.write_bytes(b"x")
+
+    with pytest.raises(UnreadableDocumentError, match="no soportada"):
+        load_document(path)

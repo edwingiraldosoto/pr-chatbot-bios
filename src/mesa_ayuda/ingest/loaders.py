@@ -15,7 +15,10 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
+import docx
 import pypdf
+from docx.table import Table
+from docx.text.paragraph import Paragraph
 
 
 @dataclass(frozen=True)
@@ -34,6 +37,7 @@ class UnreadableDocumentError(Exception):
 
 _MD_HEADING = re.compile(r"^(#{1,6})\s+(.+?)\s*#*\s*$")
 _MD_FENCE = re.compile(r"^\s*(```|~~~)")
+_DOCX_HEADING_LEVEL = re.compile(r"(\d+)\s*$")
 
 
 def decode_text(data: bytes) -> str:
@@ -139,10 +143,62 @@ def load_pdf(path: Path) -> list[Section]:
         raise UnreadableDocumentError("no tiene texto extraíble (¿PDF escaneado?)") from None
 
 
+def _docx_heading_level(paragraph: Paragraph) -> int | None:
+    style = paragraph.style.name if paragraph.style is not None else ""
+    lowered = style.lower()
+    if lowered in {"title", "título"}:
+        return 0  # el título del documento queda por encima de los "Heading 1"
+    if lowered.startswith(("heading", "título", "titulo", "encabezado")):
+        match = _DOCX_HEADING_LEVEL.search(style)
+        return int(match.group(1)) if match else 1
+    return None
+
+
+def _table_lines(table: Table) -> list[str]:
+    lines = []
+    for row in table.rows:
+        cells: list[str] = []
+        for cell in row.cells:
+            text = " ".join(cell.text.split())
+            if text and (not cells or cells[-1] != text):  # celdas combinadas se repiten
+                cells.append(text)
+        if cells:
+            lines.append(" | ".join(cells))
+    return ["", *lines, ""]
+
+
+def load_docx(path: Path) -> list[Section]:
+    """Una sección por estilo de título (Heading/Título N); las tablas se leen por filas."""
+    try:
+        document = docx.Document(str(path))
+    except Exception as error:  # BadZipFile, KeyError, errores de XML de lxml, ...
+        raise UnreadableDocumentError(f"DOCX dañado ({type(error).__name__})") from error
+
+    tracker = _HeadingTracker()
+    for block in document.iter_inner_content():
+        if isinstance(block, Table):
+            for line in _table_lines(block):
+                tracker.line(line)
+            continue
+        text = block.text.strip()
+        level = _docx_heading_level(block)
+        if level is not None and text:
+            tracker.heading(level, text)
+            continue
+        style = block.style.name.lower() if block.style is not None else ""
+        if text and "list" in style:
+            text = f"- {text}"
+        # Cada párrafo de Word es un párrafo: se separan con línea en blanco.
+        tracker.line(text)
+        tracker.line("")
+    return _require_text(tracker.finish())
+
+
 LOADERS: dict[str, Callable[[Path], list[Section]]] = {
     ".md": load_markdown,
     ".txt": load_text,
     ".pdf": load_pdf,
+    ".docx": load_docx,
 }
 
 
