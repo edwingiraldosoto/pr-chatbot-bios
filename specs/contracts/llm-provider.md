@@ -26,8 +26,8 @@ class LLMProvider(Protocol):
         system: str,
         messages: Sequence[ChatMessage],
         *,
-        temperature: float,
         max_tokens: int,
+        temperature: float | None = None,   # None = la del perfil
     ) -> LLMResult: ...
 ```
 
@@ -51,13 +51,15 @@ class LLMProvider(Protocol):
 - Los SDK se crean con sus reintentos propios desactivados, para que la política sea una
   sola y probada.
 
-**Parámetros por proveedor**:
+**Parámetros por proveedor** (todos salen del perfil del proveedor en la configuración,
+CA-R1.6; ninguno está fijo en el código). Si la temperatura del perfil está vacía, el
+adaptador no la envía nunca, aunque la llamada pida una (la reformulación pide 0):
 
 | Proveedor | `temperature` | Límite de salida | Otros |
 |---|---|---|---|
-| Anthropic | No se envía (el SDK 2.6 la retiró) | `max_tokens` | `output_config.effort="low"` salvo modelos que no lo aceptan (R-05) |
-| OpenAI | Se envía | `max_completion_tokens` (API oficial) o `max_tokens` (con `LLM_BASE_URL`) | — |
-| Gemini | Se envía | `max_output_tokens` | — |
+| Anthropic | Nunca (el SDK 2.6 la retiró) | `max_tokens` | `output_config.effort` = `LLM_ANTHROPIC_EFFORT` (vacío: no se envía; R-05) |
+| OpenAI | `LLM_OPENAI_TEMPERATURE` (vacío: no se envía) | `LLM_OPENAI_TOKEN_PARAM`; `auto` = `max_completion_tokens` en la API oficial y `max_tokens` con URL propia | `reasoning_effort` = `LLM_OPENAI_REASONING_EFFORT` (vacío: no se envía) |
+| Gemini | `LLM_GEMINI_TEMPERATURE` (vacío: no se envía) | `max_output_tokens` | — |
 
 **Implementaciones**: `AnthropicProvider`, `OpenAIProvider` (acepta `base_url` para APIs
 compatibles), `GeminiProvider` (opcional), `FakeProvider` (pruebas: respuestas programadas

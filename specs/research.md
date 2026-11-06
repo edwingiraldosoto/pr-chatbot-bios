@@ -126,6 +126,16 @@
   claros (CA-R1.3).
 - **Alternativas**: todo en `.env` (largo, sin estructura, mezcla secretos y ajustes); TOML
   (equivalente; YAML es más conocido por perfiles no Python).
+- **Ampliación (2026-11-06, pedido del autor, CA-R1.6)**: un perfil por proveedor (modelo,
+  API key y parámetros propios) en lugar de un solo juego de valores `LLM_*`.
+  - Con un solo juego, cambiar de proveedor obligaba a cambiar tres valores a la vez
+    (proveedor, modelo y key); olvidar uno daba un error en la primera pregunta.
+  - Los parámetros que cada modelo acepta difieren (T-21): pasan a la configuración con
+    "vacío = no se envía", y desaparece la lista de modelos que estaba en el código.
+  - Gemini pasa a ser dependencia normal: elegirlo no exige instalar nada.
+  - Alternativas descartadas: recargar la configuración en caliente (un reinicio tarda
+    segundos y evita estados a medias, con un cliente viejo y un prompt nuevo); un archivo
+    por proveedor (más archivos para el mismo efecto).
 
 ## R-09 — Indexación incremental y concurrencia
 

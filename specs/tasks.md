@@ -86,6 +86,12 @@ una irrelevante devuelve "no encontrado" sin llamar al LLM.
 - [x] T-24 [US4] Reformulación de preguntas de seguimiento con respaldo si falla — `src/mesa_ayuda/rewriter.py`, `tests/unit/test_rewriter.py` — RF-05 (CA-05.1)
 - [x] T-25 [US1] [US2] Servicio de respuesta: rechazo previo, `NO_ENCONTRADO`, extracción de `[n]` y citas por código, uso de tokens — `src/mesa_ayuda/answering.py`, `tests/unit/test_answering.py` — RF-03, RF-04 (CA-03.1–CA-03.3, CA-04.2)
 
+Cambio pedido por el autor el 2026-11-06 (CA-R1.6, plan 1.4):
+
+- [ ] T-46 Perfil de configuración por proveedor (modelo, API key, temperatura, esfuerzo, URL) y resolución del proveedor activo — `src/mesa_ayuda/config.py`, `config.yaml`, `.env.example`, `tests/unit/test_config.py` — RNF-01 (CA-R1.6)
+- [ ] T-47 Adaptadores y fábrica sin parámetros fijos: todo sale del perfil; Gemini como dependencia normal — `src/mesa_ayuda/llm/`, `src/mesa_ayuda/answering.py`, `src/mesa_ayuda/rewriter.py`, `pyproject.toml` — RNF-01 (CA-R1.4, CA-R1.6)
+- [ ] T-48 Comando `python -m mesa_ayuda.llm.check` que verifica la configuración con una llamada real — `src/mesa_ayuda/llm/check.py`, `tests/unit/test_llm_check.py` — RNF-01 (CA-R1.6)
+
 **Punto de control**: MVP del motor de respuestas probado sin Telegram.
 
 ---
@@ -200,6 +206,9 @@ Estado al momento de la entrega (se actualiza al cerrar cada fase).
 | T-23 | RNF-01 | S5 | Terminada | `cf2612d`, `a0f25c2` |
 | T-24 | RF-05 | S5 | Terminada | `1e1baa7` |
 | T-25 | RF-03, RF-04 | S5 | Terminada | `604857f` |
+| T-46 | RNF-01 | S5 | Pendiente | — |
+| T-47 | RNF-01 | S5 | Pendiente | — |
+| T-48 | RNF-01 | S5 | Pendiente | — |
 | T-26 | RF-05, RF-10 | S6 | Pendiente | — |
 | T-27 | RF-07, RNF-05 | S6 | Pendiente | — |
 | T-28 | RNF-05, RF-12 | S6 | Pendiente | — |
@@ -239,7 +248,7 @@ Estado al momento de la entrega (se actualiza al cerrar cada fase).
 | RF-12 | T-05, T-28, T-39 |
 | RF-13 | T-34 |
 | RF-14 | T-37 |
-| RNF-01 | T-02, T-03, T-20–T-23 |
+| RNF-01 | T-02, T-03, T-20–T-23, T-46–T-48 |
 | RNF-02 | T-32, T-36, T-40, T-45 |
 | RNF-03 | T-04, T-45 |
 | RNF-04 | T-05, T-19, T-39 |

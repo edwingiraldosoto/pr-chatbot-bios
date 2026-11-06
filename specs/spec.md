@@ -359,6 +359,7 @@ El sistema MUST mantener un historial por usuario para entender preguntas de seg
 - **CA-R1.3** Una configuración inválida o un secreto faltante detienen el arranque con un mensaje que nombra el parámetro y el problema.
 - **CA-R1.4** El proveedor de LLM se cambia solo con configuración; se soportan al menos dos proveedores comerciales y cualquier API compatible con el formato de uno de ellos.
 - **CA-R1.5** El prompt de sistema se lee del archivo indicado en `SYSTEM_PROMPT_PATH`.
+- **CA-R1.6** Cambiar de proveedor de LLM es cambiar `LLM_PROVIDER` y reiniciar el proceso: cada proveedor tiene en la configuración su modelo, su API key y sus parámetros propios (temperatura, esfuerzo de razonamiento, URL), de modo que ningún ajuste de un proveedor o modelo exige modificar ni desplegar código. Un comando verifica la configuración con una llamada real antes de reiniciar el bot.
 
 #### RNF-02 — Ejecución
 
