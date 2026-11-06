@@ -24,9 +24,11 @@ REDACTED = "***"
 #: Formas típicas de credenciales, redactadas aunque no se conozca su valor exacto
 #: (p. ej. el token de otro bot pegado en un mensaje de error).
 SECRET_PATTERNS: tuple[re.Pattern[str], ...] = (
-    re.compile(r"\b\d{6,12}:[A-Za-z0-9_-]{30,}\b"),  # token de bot de Telegram
-    re.compile(r"\bsk-[A-Za-z0-9_-]{20,}\b"),  # API keys estilo OpenAI / Anthropic
-    re.compile(r"\bAIza[0-9A-Za-z_-]{30,}\b"),  # API keys de Google
+    # Token de bot de Telegram. Sin "\b" al inicio: en la URL ".../bot123:ABC.../getMe" no
+    # hay límite de palabra entre "bot" y el número, y el token quedaría sin redactar.
+    re.compile(r"(?<!\d)\d{6,12}:[A-Za-z0-9_-]{30,}"),
+    re.compile(r"sk-[A-Za-z0-9_-]{20,}"),  # API keys estilo OpenAI / Anthropic
+    re.compile(r"AIza[0-9A-Za-z_-]{30,}"),  # API keys de Google
 )
 
 #: Librerías ruidosas o que registran URLs con el token. Se suben a WARNING; la redacción

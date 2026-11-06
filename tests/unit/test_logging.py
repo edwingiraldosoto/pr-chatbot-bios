@@ -74,6 +74,18 @@ def test_token_in_third_party_log_url_is_redacted(log_stream: io.StringIO) -> No
     assert "getUpdates" in output
 
 
+def test_unknown_token_inside_telegram_url_is_redacted(log_stream: io.StringIO) -> None:
+    # Regresión: con "\b" al inicio del patrón, "bot123..." no tenía límite de palabra y
+    # un token no configurado (p. ej. de otro bot) quedaba visible.
+    other_token = "123456789:AAOtherBotTokenNotConfigured_zyxwvuts"
+
+    logging.getLogger("telegram").warning("POST https://api.telegram.org/bot%s/getMe", other_token)
+
+    output = log_stream.getvalue()
+    assert other_token not in output
+    assert "/bot***/getMe" in output
+
+
 def test_httpx_info_is_silenced(log_stream: io.StringIO) -> None:
     logging.getLogger("httpx").info("HTTP Request: POST https://api.telegram.org/botX/getMe")
 
