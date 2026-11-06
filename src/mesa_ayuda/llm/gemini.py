@@ -52,7 +52,10 @@ class GeminiProvider:
             api_key=api_key,
             http_options=genai_types.HttpOptions(
                 timeout=int(timeout_seconds * 1000),  # milisegundos
-                # Un solo intento: la política de reintentos es la de RetryingProvider.
+                # Un solo intento: la política de reintentos es la de RetryingProvider. Sin
+                # retry_options el SDK no reintenta con httpx2, pero con aiohttp (si está
+                # instalado) reintenta por su cuenta los errores de conexión, con esperas de
+                # 1 a 10 s que se sumarían a LLM_TIMEOUT_SECONDS. attempts=1 lo evita.
                 retry_options=genai_types.HttpRetryOptions(attempts=1),
                 httpx_async_client=httpx_async_client,
             ),
