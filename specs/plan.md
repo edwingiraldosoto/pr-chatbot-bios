@@ -35,7 +35,7 @@ LlamaIndex, para poder probar y documentar el prompt final (ver research.md, R-0
 |---|---|---|
 | Telegram (async, polling, JobQueue) | `python-telegram-bot[job-queue]` | 22.8 |
 | Índice vectorial local | `chromadb` | 1.5.9 |
-| Embeddings locales | `sentence-transformers` (torch CPU) | 6.2.0 |
+| Embeddings locales | `fastembed` (ONNX Runtime, sin torch) | 0.9.1 |
 | PDF (texto por página) | `pypdf` | 7.0.0 |
 | DOCX | `python-docx` | 1.2.0 |
 | Configuración tipada | `pydantic-settings` + `PyYAML` | 2.16.2 |
@@ -348,3 +348,4 @@ termina con `pytest`, `ruff` y `mypy` en verde y con 1 o 2 commits.
 |---|---|---|---|
 | 1.0 | 2026-11-06 | Versión inicial generada con `/speckit-plan`. | — |
 | 1.1 | 2026-11-06 | El fragmentador agrega el nivel "línea" (y "palabra") entre párrafo y oración. | El texto de un PDF no trae líneas en blanco; sin ese nivel las líneas se pegaban (hallado en S3 al revisar fragmentos reales). |
+| 1.2 | 2026-11-06 | Embeddings con `fastembed` en lugar de `sentence-transformers`. | Medido en T-12: mismos vectores, instalación de 14 a 3 min y de 1,6 GB a 456 MB (R-04). |

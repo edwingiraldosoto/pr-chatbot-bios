@@ -45,7 +45,7 @@
 
 ## R-04 — Modelo de embeddings y almacén vectorial
 
-- **Decisión**: `intfloat/multilingual-e5-small` local con `sentence-transformers` en CPU,
+- **Decisión**: `intfloat/multilingual-e5-small` local con `fastembed` (ONNX Runtime, CPU),
   y ChromaDB persistente con distancia coseno.
 - **Justificación**: el modelo es multilingüe (español), pequeño (~118 M parámetros,
   384 dimensiones), gratis y evita una segunda API key (sugerencia del enunciado). Chroma
@@ -53,12 +53,20 @@
   página, versión) con filtros `$in`, necesarios para citar y para el cambio de versión.
 - **Detalles que no se pueden olvidar**: e5 exige prefijos `query: ` y `passage: `; la
   colección se crea con `hnsw:space = cosine` (por defecto Chroma usa L2) y la similitud se
-  calcula como `1 − distancia`.
-- **Riesgo**: `sentence-transformers` trae `torch`, que pesa. Mitigación: instalar torch
-  solo CPU (índice de PyTorch para CPU en Linux/Docker) y avisar en el README de la descarga
-  inicial del modelo. Alternativa preparada: `fastembed` (ONNX, sin torch) detrás de la
-  misma interfaz `Embedder`; si la instalación medida en T-12 resulta inaceptable, se cambia
-  y se registra en el spec.
+  calcula como `1 − distancia`. fastembed no trae e5-small en su catálogo: se registra como
+  modelo propio (`add_custom_model`, pooling por promedio, normalizado, `onnx/model.onnx`
+  del repositorio oficial del modelo).
+- **Cambio en T-12 (medido)**: la primera opción era `sentence-transformers`, que depende de
+  `torch`. Medición en el equipo de desarrollo (Windows, Python 3.11):
+
+  | Opción | Instalación | Tamaño del entorno | Vectores |
+  |---|---|---|---|
+  | `sentence-transformers` + torch | 14 min | 1,6 GB | referencia |
+  | `fastembed` (ONNX) | 3 min | 456 MB | idénticos (coseno 1,0000 en 3 textos) |
+
+  En Linux/Docker la diferencia es mayor: sin un índice especial, `pip` instala torch con
+  CUDA (varios GB). Con vectores idénticos no hay pérdida de calidad, así que se cambia.
+  El modelo ONNX (465 MB) se descarga una vez, la primera vez que arranca el bot.
 - **Alternativas**: embeddings de OpenAI/Gemini (segunda API key y costo); FAISS (sin
   metadatos ni persistencia integrados); LanceDB y sqlite-vec (válidos, menos documentación
   para filtros por metadatos); Qdrant en Docker (exige Docker al evaluador).

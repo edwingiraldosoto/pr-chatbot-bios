@@ -59,7 +59,7 @@ referencian sus tareas (`feat(index): … [T-14, T-15]`).
 
 **Propósito**: índice persistente, incremental y seguro ante consultas concurrentes.
 
-- [ ] T-12 Interfaz `Embedder`, `LocalE5Embedder` (prefijos `query:`/`passage:`) y `FakeEmbedder`; medir tamaño y tiempo de instalación y registrar si se cambia a `fastembed` (medición en S2: `pip install -e .[dev]` tardó 14 min y el entorno ocupa 1,6 GB, casi todo torch) — `src/mesa_ayuda/embeddings.py`, `tests/unit/test_embeddings.py` — RF-02
+- [ ] T-12 Interfaz `Embedder`, `LocalE5Embedder` (prefijos `query:`/`passage:`) y `FakeEmbedder`; medir tamaño y tiempo de instalación y registrar si se cambia a `fastembed` (medido: se cambia a `fastembed`, ver R-04) — `src/mesa_ayuda/embeddings.py`, `tests/unit/test_embeddings.py` — RF-02
 - [ ] T-13 Envoltura de Chroma persistente con distancia coseno y filtro por versiones activas — `src/mesa_ayuda/vectorstore.py`, `tests/integration/test_vectorstore.py` — RF-02 (CA-02.4, CA-02.5)
 - [ ] T-14 [P] [US6] Manifest: lectura, escritura atómica y cálculo de diferencias (nuevo, cambiado, sin cambios, eliminado, renombrado) — `src/mesa_ayuda/indexing/manifest.py`, `tests/unit/test_manifest.py` — RF-09 (CA-09.1, CA-09.4)
 - [ ] T-15 [US6] Indexador incremental con cambio de versión por documento, retiro de ilegibles y eliminados, `ReindexSummary` — `src/mesa_ayuda/indexing/indexer.py`, `tests/integration/test_indexer.py` — RF-02, RF-09 (CA-09.2, CA-09.3, CA-09.6)
