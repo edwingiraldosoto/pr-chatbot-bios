@@ -59,12 +59,12 @@ referencian sus tareas (`feat(index): … [T-14, T-15]`).
 
 **Propósito**: índice persistente, incremental y seguro ante consultas concurrentes.
 
-- [ ] T-12 Interfaz `Embedder`, `LocalE5Embedder` (prefijos `query:`/`passage:`) y `FakeEmbedder`; medir tamaño y tiempo de instalación y registrar si se cambia a `fastembed` (medido: se cambia a `fastembed`, ver R-04) — `src/mesa_ayuda/embeddings.py`, `tests/unit/test_embeddings.py` — RF-02
-- [ ] T-13 Envoltura de Chroma persistente con distancia coseno y filtro por versiones activas — `src/mesa_ayuda/vectorstore.py`, `tests/integration/test_vectorstore.py` — RF-02 (CA-02.4, CA-02.5)
-- [ ] T-14 [P] [US6] Manifest: lectura, escritura atómica y cálculo de diferencias (nuevo, cambiado, sin cambios, eliminado, renombrado) — `src/mesa_ayuda/indexing/manifest.py`, `tests/unit/test_manifest.py` — RF-09 (CA-09.1, CA-09.4)
-- [ ] T-15 [US6] Indexador incremental con cambio de versión por documento, retiro de ilegibles y eliminados, `ReindexSummary` — `src/mesa_ayuda/indexing/indexer.py`, `tests/integration/test_indexer.py` — RF-02, RF-09 (CA-09.2, CA-09.3, CA-09.6)
-- [ ] T-16 [US6] Reconstrucción completa por cambio de ajustes o manifest/índice faltante o corrupto (colección nueva + cambio de puntero) — `src/mesa_ayuda/indexing/indexer.py`, `tests/integration/test_indexer.py` — RF-09 (CA-09.5)
-- [ ] T-17 [US6] Ejecución en hilo y candado no bloqueante; prueba de consulta durante el cambio de versión — `src/mesa_ayuda/indexing/indexer.py`, `tests/integration/test_indexer.py` — RF-08 (CA-08.4, CA-08.5)
+- [x] T-12 Interfaz `Embedder`, `LocalE5Embedder` (prefijos `query:`/`passage:`) y `FakeEmbedder`; medir tamaño y tiempo de instalación y registrar si se cambia a `fastembed` (medido: se cambia a `fastembed`, ver R-04) — `src/mesa_ayuda/embeddings.py`, `tests/unit/test_embeddings.py` — RF-02
+- [x] T-13 Envoltura de Chroma persistente con distancia coseno y filtro por versiones activas — `src/mesa_ayuda/vectorstore.py`, `tests/integration/test_vectorstore.py` — RF-02 (CA-02.4, CA-02.5)
+- [x] T-14 [P] [US6] Manifest: lectura, escritura atómica y cálculo de diferencias (nuevo, cambiado, sin cambios, eliminado, renombrado) — `src/mesa_ayuda/indexing/manifest.py`, `tests/unit/test_manifest.py` — RF-09 (CA-09.1, CA-09.4)
+- [x] T-15 [US6] Indexador incremental con cambio de versión por documento, retiro de ilegibles y eliminados, `ReindexSummary` — `src/mesa_ayuda/indexing/indexer.py`, `tests/integration/test_indexer.py` — RF-02, RF-09 (CA-09.2, CA-09.3, CA-09.6)
+- [x] T-16 [US6] Reconstrucción completa por cambio de ajustes o manifest/índice faltante o corrupto (colección nueva + cambio de puntero) — `src/mesa_ayuda/indexing/indexer.py`, `tests/integration/test_indexer.py` — RF-09 (CA-09.5)
+- [x] T-17 [US6] Ejecución en hilo y candado no bloqueante; prueba de consulta durante el cambio de versión — `src/mesa_ayuda/indexing/indexer.py`, `tests/integration/test_indexer.py` — RF-08 (CA-08.4, CA-08.5)
 
 **Punto de control**: reiniciar sin cambios no reindexa; actualizar un documento nunca mezcla versiones.
 
@@ -186,12 +186,12 @@ Estado al momento de la entrega (se actualiza al cerrar cada fase).
 | T-09 | RF-01 | S3 | Terminada | `aa4c9a3` |
 | T-10 | RF-02 | S3 | Terminada | `df82086` |
 | T-11 | Enunciado §8 | S3 | Terminada | `ae8f903` |
-| T-12 | RF-02 | S4 | Pendiente | — |
-| T-13 | RF-02 | S4 | Pendiente | — |
-| T-14 | RF-09 | S4 | Pendiente | — |
-| T-15 | RF-02, RF-09 | S4 | Pendiente | — |
-| T-16 | RF-09 | S4 | Pendiente | — |
-| T-17 | RF-08 | S4 | Pendiente | — |
+| T-12 | RF-02 | S4 | Terminada | `02e63d6` |
+| T-13 | RF-02 | S4 | Terminada | `2ef87e7` |
+| T-14 | RF-09 | S4 | Terminada | `2440903` |
+| T-15 | RF-02, RF-09 | S4 | Terminada | `4f06e02` |
+| T-16 | RF-09 | S4 | Terminada | `4f06e02` |
+| T-17 | RF-08 | S4 | Terminada | `01adc2d` |
 | T-18 | RF-03, RF-04 | S5 | Pendiente | — |
 | T-19 | RF-03, RNF-04 | S5 | Pendiente | — |
 | T-20 | RNF-01, RNF-05 | S5 | Pendiente | — |

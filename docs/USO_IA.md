@@ -116,3 +116,30 @@ dependencia solo para eso.
   y el separador después del solapamiento (ninguna falló). Escribí la prueba que faltaba.
 - Las pruebas de tamaño y solapamiento usan textos aleatorios con semilla fija (200+ casos)
   en lugar de ejemplos escritos a mano.
+
+### 2026-11-06 — Índice incremental (S4: T-12 a T-17)
+
+**Decisión con datos (T-12)**: medí las dos opciones de embeddings en entornos separados.
+Con `fastembed` la instalación bajó de 14 min y 1,6 GB a 3 min y 456 MB, con vectores
+idénticos a los de `sentence-transformers` (coseno 1,0000). Cambié de librería y actualicé
+R-04 y el plan antes del código. La herramienta propuso primero usar un modelo del
+catálogo de fastembed (paraphrase-multilingual-MiniLM); lo descarté porque e5-small es
+mejor para búsqueda y se puede registrar como modelo propio.
+
+**Criterio aplicado a lo generado**:
+- El primer diseño creaba una colección vacía `kb_1` solo para listar las existentes; lo
+  cambié por una función que lista sin crear.
+- La garantía "nunca dos versiones ni el documento vacío" se comprobó con una prueba de
+  carga (3 hilos buscando mientras otro actualiza 10 veces el documento) y con una mutación:
+  al invertir "activar y luego borrar" la prueba falla; con el orden correcto pasa en 5 de
+  5 corridas.
+- En Windows no se puede borrar `data/chroma` mientras el proceso tiene abiertos sus
+  archivos; la prueba de "índice borrado" simula el caso borrando la colección.
+- La prueba con el modelo real (465 MB) no corre por defecto, para que la suite no use
+  red (constitución, principio V); se corre con `RUN_MODEL_TESTS=1`.
+
+**Primer dato para calibrar el umbral** (modelo real, 4 documentos de ejemplo, top-1):
+6 preguntas que los documentos responden dieron 0,865–0,904, todas con el fragmento
+correcto en primer lugar; 5 preguntas sin respuesta en los documentos dieron 0,740–0,820.
+Con el umbral en 0,80 pasarían 2 de esas 5 y la defensa sería el `NO_ENCONTRADO` del
+modelo. Se calibra con más preguntas en S8 (T-37/T-38).
