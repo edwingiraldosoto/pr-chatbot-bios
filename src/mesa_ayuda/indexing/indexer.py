@@ -20,6 +20,7 @@ Solo corre una reindexación a la vez; una segunda solicitud se rechaza de inmed
 
 from __future__ import annotations
 
+import asyncio
 import re
 import threading
 import time
@@ -195,6 +196,12 @@ class Indexer:
         return self._reindex_lock.locked()
 
     # --- Reindexación -----------------------------------------------------------------------
+
+    async def reindex_async(self, *, full: bool = False) -> ReindexSummary:
+        """Igual que :meth:`reindex`, en un hilo aparte para no bloquear el bot."""
+        if self.is_reindexing:  # rechazo inmediato, sin crear el hilo
+            raise ReindexInProgressError
+        return await asyncio.to_thread(self.reindex, full=full)
 
     def reindex(self, *, full: bool = False) -> ReindexSummary:
         """Sincroniza el índice con la carpeta.

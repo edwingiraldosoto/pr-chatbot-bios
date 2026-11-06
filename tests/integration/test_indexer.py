@@ -1,15 +1,18 @@
-"""Pruebas del indexador con Chroma real y embeddings falsos (T-15, T-16; RF-09)."""
+"""Pruebas del indexador con Chroma real y embeddings falsos (T-15, T-16, T-17; RF-08, RF-09)."""
 
 from __future__ import annotations
 
+import asyncio
 import json
 import shutil
+import threading
+from collections.abc import Sequence
 from pathlib import Path
 
 import pytest
 
 from mesa_ayuda.embeddings import FakeEmbedder
-from mesa_ayuda.indexing.indexer import Indexer
+from mesa_ayuda.indexing.indexer import Indexer, ReindexInProgressError
 from mesa_ayuda.vectorstore import ChunkRecord, collection_names
 
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures"
@@ -271,3 +274,127 @@ def test_deleted_index_folder_rebuilds(ws: Workspace) -> None:
 
     assert summary.rebuild_reason == "el índice en disco no existe"
     assert ws.search(restarted, "vacaciones") == ["vacaciones.md@1"]
+
+
+def test_full_reindex_on_request_keeps_serving_old_index_until_switch(ws: Workspace) -> None:
+    # CA-08.2 y CA-08.4: durante "/reindex full" las búsquedas usan el índice anterior.
+    ws.write("vacaciones.md", VACATIONS_V1)
+    embedder = BlockingEmbedder()
+    indexer = ws.indexer(embedder=embedder)
+    indexer.reindex()
+
+    embedder.block()
+    worker = threading.Thread(target=indexer.reindex, kwargs={"full": True})
+    worker.start()
+    embedder.wait_until_blocked()
+
+    during = indexer.search(embedder.embed_query("vacaciones"), 5)
+    embedder.release()
+    worker.join(timeout=10)
+
+    assert [hit.doc_key for hit in during] == ["vacaciones.md@1"]
+    assert collection_names(ws.data / "chroma") == ["kb_2"]
+    assert ws.search(indexer, "vacaciones") == ["vacaciones.md@1"]
+
+
+# --- Concurrencia (T-17) --------------------------------------------------------------------
+
+
+class BlockingEmbedder(FakeEmbedder):
+    """Embeddings falsos que pueden detenerse a mitad de una indexación."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._gate = threading.Event()
+        self._gate.set()
+        self._blocked = threading.Event()
+
+    def block(self) -> None:
+        self._gate.clear()
+
+    def release(self) -> None:
+        self._gate.set()
+
+    def wait_until_blocked(self) -> None:
+        assert self._blocked.wait(timeout=10), "la indexación no llegó a los embeddings"
+
+    def embed_documents(self, texts: Sequence[str]) -> list[list[float]]:
+        if not self._gate.is_set():
+            self._blocked.set()
+            self._gate.wait(timeout=10)
+        return super().embed_documents(texts)
+
+
+def test_second_reindex_is_rejected_while_one_runs(ws: Workspace) -> None:
+    # CA-08.5
+    ws.write("vacaciones.md", VACATIONS_V1)
+    embedder = BlockingEmbedder()
+    indexer = ws.indexer(embedder=embedder)
+    embedder.block()
+    worker = threading.Thread(target=indexer.reindex)
+    worker.start()
+    embedder.wait_until_blocked()
+
+    assert indexer.is_reindexing
+    with pytest.raises(ReindexInProgressError):
+        indexer.reindex()
+
+    embedder.release()
+    worker.join(timeout=10)
+    assert not indexer.is_reindexing
+
+
+async def test_async_reindex_does_not_block_the_event_loop(ws: Workspace) -> None:
+    # CA-08.4: mientras indexa en otro hilo, el bucle de eventos sigue atendiendo.
+    ws.write("vacaciones.md", VACATIONS_V1)
+    embedder = BlockingEmbedder()
+    indexer = ws.indexer(embedder=embedder)
+    embedder.block()
+
+    task = asyncio.create_task(indexer.reindex_async())
+    await asyncio.to_thread(embedder.wait_until_blocked)
+    with pytest.raises(ReindexInProgressError):
+        await indexer.reindex_async()
+    ticks = 0
+    for _ in range(3):
+        await asyncio.sleep(0)
+        ticks += 1
+    embedder.release()
+    summary = await task
+
+    assert ticks == 3 and summary.added == ["vacaciones.md"]
+
+
+def test_queries_during_updates_never_mix_versions_or_see_empty(ws: Workspace) -> None:
+    # CA-09.2 bajo carga: un hilo actualiza el documento una y otra vez mientras otros
+    # buscan sin parar. Cada búsqueda debe ver exactamente una versión, nunca cero.
+    path = ws.write("vacaciones.md", VACATIONS_V1)
+    indexer = ws.indexer()
+    indexer.reindex()
+    query = ws.embedder.embed_query("días hábiles de vacaciones")
+    stop = threading.Event()
+    problems: list[str] = []
+    searches = 0
+
+    def searcher() -> None:
+        nonlocal searches
+        while not stop.is_set():
+            keys = {hit.doc_key for hit in indexer.search(query, 10)}
+            searches += 1
+            if len(keys) != 1:
+                problems.append(f"versiones visibles: {sorted(keys)}")
+
+    readers = [threading.Thread(target=searcher) for _ in range(3)]
+    for reader in readers:
+        reader.start()
+    for version in range(2, 12):
+        days = 15 + version
+        path.write_text(VACATIONS_V1.replace("15", str(days)), encoding="utf-8")
+        assert indexer.reindex().updated == ["vacaciones.md"]
+    stop.set()
+    for reader in readers:
+        reader.join(timeout=10)
+
+    assert problems == []
+    assert searches > 10
+    assert ws.search(indexer, "vacaciones") == ["vacaciones.md@11"]
