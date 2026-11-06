@@ -93,10 +93,11 @@ Razón: limita el daño de cualquier prompt injection a "decir algo incorrecto",
   documentación → verificación.
 - Commits en formato Conventional Commits, en español. Cada commit de implementación
   referencia las tareas que atiende (`[T-07]` o `[T-07, T-08]`).
-- Se hacen 1 o 2 commits por sección del plan, solo después de que la sección pase sus
-  pruebas.
-- Los commits salen a nombre del autor, sin atribución a herramientas de IA. No se hace
-  `git push` sin solicitud explícita del autor.
+- Commits atómicos: uno por tarea (o por corrección), hechos solo después de que la sección
+  completa del plan pase sus pruebas. Así cada commit deja el repositorio en verde y el
+  historial muestra la evolución tarea por tarea.
+- La autoría de los commits es del autor del proyecto; el uso de IA no se oculta, se
+  documenta en `docs/USO_IA.md`. No se hace `git push` sin solicitud explícita del autor.
 - Cada uso relevante de IA (prompt, sugerencia aceptada o rechazada, verificación) se anota
   en `docs/USO_IA.md` durante el desarrollo, no al final.
 
@@ -111,4 +112,12 @@ Razón: limita el daño de cualquier prompt injection a "decir algo incorrecto",
 - Revisión de cumplimiento: antes de la entrega se verifica cada principio contra el
   repositorio (pruebas, escaneo de secretos, trazabilidad de tareas y commits).
 
-**Version**: 1.0.0 | **Ratified**: 2026-11-06 | **Last Amended**: 2026-11-06
+**Version**: 1.1.0 | **Ratified**: 2026-11-06 | **Last Amended**: 2026-11-06
+
+### Registro de enmiendas
+
+- **1.1.0 (2026-11-06)**: commits por tarea en lugar de 1–2 por sección. Una revisión
+  contra la rúbrica mostró que la regla anterior chocaba con el criterio "commits pequeños
+  y atómicos" del enunciado. Se conserva la condición de hacer commit solo con la sección
+  probada. Se reformula la regla de autoría para dejar explícito que el uso de IA se
+  documenta.
