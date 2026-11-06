@@ -33,7 +33,7 @@ SECRET_PATTERNS: tuple[re.Pattern[str], ...] = (
 
 #: Librerías ruidosas o que registran URLs con el token. Se suben a WARNING; la redacción
 #: sigue activa como segunda barrera si alguien baja el nivel.
-NOISY_LOGGERS = ("httpx", "httpcore", "telegram.ext.Updater", "chromadb", "sentence_transformers")
+NOISY_LOGGERS = ("httpx", "httpcore", "telegram.ext.Updater", "chromadb", "fastembed")
 
 
 class SecretRedactor:
