@@ -186,3 +186,21 @@ ejemplo, umbral 0,80, 10 preguntas):
 
 Costo total: 20.140 tokens de entrada y 975 de salida, unos USD 0,0025, es decir,
 USD 0,00025 por pregunta. Latencia de 0,8 a 2 s por respuesta.
+
+### 2026-11-06 — Perfil de configuración por proveedor (T-46 a T-48)
+
+**Pedido del autor**: cambiar de proveedor, modelo o API key solo con configuración, sin
+tocar ni desplegar código. El diseño se registró primero (CA-R1.6, R-08, plan 1.4).
+
+**Decisiones propias sobre lo propuesto**:
+- Las keys por proveedor se llaman `LLM_ANTHROPIC_API_KEY` y no `ANTHROPIC_API_KEY`: esta
+  última suele estar definida en el equipo para otras herramientas (Claude Code la usa) y
+  se colaría en el bot sin que nadie lo note.
+- Las variables genéricas del enunciado se mantienen, porque el enunciado las nombra. Su
+  riesgo (un `LLM_MODEL` olvidado al cambiar de proveedor) se cubre con una advertencia al
+  arrancar, probada.
+- No se implementó recarga en caliente: un reinicio tarda segundos y evita estados a medias.
+- El comando de verificación se probó contra la API real en cuatro casos: configuración
+  actual (OK), proveedor sin key (salida 2, nombra la variable), modelo inexistente (404 y
+  qué revisar) y Haiku 4.5 con `effort` desactivado (OK). Este último antes exigía cambiar
+  código.

@@ -88,9 +88,9 @@ una irrelevante devuelve "no encontrado" sin llamar al LLM.
 
 Cambio pedido por el autor el 2026-11-06 (CA-R1.6, plan 1.4):
 
-- [ ] T-46 Perfil de configuración por proveedor (modelo, API key, temperatura, esfuerzo, URL) y resolución del proveedor activo — `src/mesa_ayuda/config.py`, `config.yaml`, `.env.example`, `tests/unit/test_config.py` — RNF-01 (CA-R1.6)
-- [ ] T-47 Adaptadores y fábrica sin parámetros fijos: todo sale del perfil; Gemini como dependencia normal — `src/mesa_ayuda/llm/`, `src/mesa_ayuda/answering.py`, `src/mesa_ayuda/rewriter.py`, `pyproject.toml` — RNF-01 (CA-R1.4, CA-R1.6)
-- [ ] T-48 Comando `python -m mesa_ayuda.llm.check` que verifica la configuración con una llamada real — `src/mesa_ayuda/llm/check.py`, `tests/unit/test_llm_check.py` — RNF-01 (CA-R1.6)
+- [x] T-46 Perfil de configuración por proveedor (modelo, API key, temperatura, esfuerzo, URL) y resolución del proveedor activo — `src/mesa_ayuda/config.py`, `config.yaml`, `.env.example`, `tests/unit/test_config.py` — RNF-01 (CA-R1.6)
+- [x] T-47 Adaptadores y fábrica sin parámetros fijos: todo sale del perfil; Gemini como dependencia normal — `src/mesa_ayuda/llm/`, `src/mesa_ayuda/answering.py`, `src/mesa_ayuda/rewriter.py`, `pyproject.toml` — RNF-01 (CA-R1.4, CA-R1.6)
+- [x] T-48 Comando `python -m mesa_ayuda.llm.check` que verifica la configuración con una llamada real — `src/mesa_ayuda/llm/check.py`, `tests/unit/test_llm_check.py` — RNF-01 (CA-R1.6)
 
 **Punto de control**: MVP del motor de respuestas probado sin Telegram.
 
@@ -206,9 +206,9 @@ Estado al momento de la entrega (se actualiza al cerrar cada fase).
 | T-23 | RNF-01 | S5 | Terminada | `cf2612d`, `a0f25c2` |
 | T-24 | RF-05 | S5 | Terminada | `1e1baa7` |
 | T-25 | RF-03, RF-04 | S5 | Terminada | `604857f` |
-| T-46 | RNF-01 | S5 | Pendiente | — |
-| T-47 | RNF-01 | S5 | Pendiente | — |
-| T-48 | RNF-01 | S5 | Pendiente | — |
+| T-46 | RNF-01 | S5 | Terminada | `26c4a55` |
+| T-47 | RNF-01 | S5 | Terminada | `26c4a55` |
+| T-48 | RNF-01 | S5 | Terminada | `3074064` |
 | T-26 | RF-05, RF-10 | S6 | Pendiente | — |
 | T-27 | RF-07, RNF-05 | S6 | Pendiente | — |
 | T-28 | RNF-05, RF-12 | S6 | Pendiente | — |
