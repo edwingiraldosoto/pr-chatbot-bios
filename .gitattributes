@@ -7,3 +7,5 @@
 *.docx binary
 *.png  binary
 *.jpg  binary
+# Fixtures con bytes exactos (codificación cp1252, CRLF, archivos dañados): sin conversión.
+tests/fixtures/** binary
