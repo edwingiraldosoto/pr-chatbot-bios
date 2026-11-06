@@ -14,7 +14,8 @@ llm:
   model: claude-haiku-5-5
   # LLM_BASE_URL: solo para provider=openai con APIs compatibles; vacío = API oficial.
   base_url: ""
-  # LLM_TEMPERATURE (0-1): baja para respuestas factuales y reproducibles.
+  # LLM_TEMPERATURE (0-1): baja para respuestas factuales y reproducibles. Anthropic no la
+  # usa (su API retiró el parámetro); aplica a openai y gemini.
   temperature: 0.1
   # LLM_MAX_TOKENS: máximo de tokens de cada respuesta; acota el costo por consulta.
   max_tokens: 600

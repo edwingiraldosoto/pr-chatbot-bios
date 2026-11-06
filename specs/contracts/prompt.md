@@ -35,15 +35,18 @@ Cada colaborador tiene derecho a 15 días hábiles…
 </pregunta>
 ```
 
-- Los caracteres `<` y `>` del texto de fragmentos y pregunta se escapan (`&lt;`, `&gt;`)
-  para que nadie pueda cerrar las etiquetas desde un documento o un mensaje.
+- Los caracteres `&`, `<` y `>` del texto de fragmentos y pregunta se escapan (`&amp;`,
+  `&lt;`, `&gt;`) para que nadie pueda cerrar las etiquetas desde un documento o un
+  mensaje; en los atributos también se escapan las comillas.
+- El historial empieza siempre con un mensaje `user`: si el recorte deja un `assistant` al
+  principio, se descarta.
 - Los fragmentos se ordenan por puntaje descendente.
 
 ## Post-proceso de la salida
 
 | Salida del modelo | Resultado |
 |---|---|
-| Exactamente `NO_ENCONTRADO` (ignorando espacios y puntuación) | "No encontré esa información en los documentos disponibles…" sin fuentes; registro `llm_not_found` |
+| `NO_ENCONTRADO` (ignorando espacios y puntuación), solo o al inicio de la respuesta | "No encontré esa información en los documentos disponibles…" sin fuentes; registro `llm_not_found` |
 | Texto con marcadores `[n]` | Se quitan los marcadores; "Fuentes:" con los fragmentos `n` válidos (sin duplicados) |
 | Texto sin marcadores | Se citan todos los fragmentos que pasaron el umbral; log `citations_fallback` |
 | Marcador `[n]` inexistente | Se ignora ese marcador; log de advertencia |

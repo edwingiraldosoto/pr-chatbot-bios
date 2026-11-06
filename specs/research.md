@@ -83,13 +83,28 @@
   respuestas de fragmentos; varias veces más caros y lentos); modelos locales con Ollama
   (sin costo, pero exigen hardware al evaluador; cubiertos igual por el adaptador
   compatible con OpenAI).
+- **Confirmación (T-21, 2026-11-06)**: el ID `claude-haiku-5-5` responde con una API key real
+  (llamada de 25 tokens de entrada y 7 de salida). Precio vigente según la referencia de
+  modelos de Anthropic: USD 0,10 por millón de tokens de entrada y USD 0,50 por millón de
+  salida (prompts de hasta 100K tokens).
+- **Hallazgos al probar la API (T-21)**:
+  - El SDK `anthropic` 2.6 ya no acepta `temperature` (la API retiró los parámetros de
+    muestreo). El adaptador de Anthropic no la envía; `LLM_TEMPERATURE` sigue aplicando a
+    OpenAI y Gemini. La defensa "temperatura baja" de R-06 se reemplaza, para Anthropic,
+    por `output_config.effort = "low"`.
+  - Haiku 5.5 razona por defecto y esos tokens cuentan dentro de `LLM_MAX_TOKENS`. Con
+    `effort = "low"` respondió sin bloques de razonamiento, lo mismo que Sonnet 5.5.
+  - Haiku 4.5 y los modelos anteriores rechazan `effort`: el adaptador no lo envía a esos
+    modelos (lista de prefijos en `llm/anthropic.py`).
+  - Modelo inexistente: 404; API key inválida: 401. Ambos se traducen a errores claros.
 
 ## R-06 — Prompt de sistema y estrategia contra respuestas inventadas
 
 - **Decisión**: prompt en `prompts/system_prompt.md`; cuatro defensas: (1) rechazo por
   umbral antes del LLM, (2) instrucciones de responder solo con los fragmentos y devolver
   exactamente `NO_ENCONTRADO` si no alcanzan, (3) fragmentos numerados con marcadores `[n]`
-  y citas construidas por el código, (4) temperatura baja.
+  y citas construidas por el código, (4) temperatura baja (en Anthropic, `effort` bajo;
+  ver R-05).
 - **Alternativas**: pedir al modelo que escriba las citas (puede inventar nombres de
   archivo); una segunda llamada de verificación (duplica el costo; se deja para producción).
 

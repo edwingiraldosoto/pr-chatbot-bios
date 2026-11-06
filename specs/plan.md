@@ -349,3 +349,4 @@ termina con `pytest`, `ruff` y `mypy` en verde y con 1 o 2 commits.
 | 1.0 | 2026-11-06 | Versión inicial generada con `/speckit-plan`. | — |
 | 1.1 | 2026-11-06 | El fragmentador agrega el nivel "línea" (y "palabra") entre párrafo y oración. | El texto de un PDF no trae líneas en blanco; sin ese nivel las líneas se pegaban (hallado en S3 al revisar fragmentos reales). |
 | 1.2 | 2026-11-06 | Embeddings con `fastembed` en lugar de `sentence-transformers`. | Medido en T-12: mismos vectores, instalación de 14 a 3 min y de 1,6 GB a 456 MB (R-04). |
+| 1.3 | 2026-11-06 | Anthropic sin `temperature` y con `effort` bajo; `LLM_TIMEOUT_SECONDS` como tiempo total con reintentos; `NO_ENCONTRADO` también al inicio de la respuesta. | Probado contra la API en T-21: el SDK 2.6 retiró `temperature` y Haiku 5.5 razona por defecto (R-05). |

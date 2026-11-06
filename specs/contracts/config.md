@@ -13,7 +13,7 @@ defecto. Las variables de entorno usan el nombre de la columna "Variable".
 | `LLM_PROVIDER` | `llm.provider` | `anthropic` \| `openai` \| `gemini` | `anthropic` | yaml | CA-R1.4 |
 | `LLM_MODEL` | `llm.model` | str | `claude-haiku-5-5` | yaml | RNF-01 |
 | `LLM_BASE_URL` | `llm.base_url` | URL o vacío (solo `openai`, para APIs compatibles) | vacío | yaml | CA-R1.4 |
-| `LLM_TEMPERATURE` | `llm.temperature` | float 0–1 | 0.1 | yaml | RNF-01 |
+| `LLM_TEMPERATURE` | `llm.temperature` | float 0–1 | 0.1 | yaml | RNF-01 (Anthropic no la usa: R-05) |
 | `LLM_MAX_TOKENS` | `llm.max_tokens` | int 50–4000 | 600 | yaml | RNF-01 |
 | `LLM_TIMEOUT_SECONDS` | `llm.timeout_seconds` | float > 0 | 30 | yaml | CA-R5.2 |
 | `LLM_MAX_RETRIES` | `llm.max_retries` | int 0–5 | 2 | yaml | CA-R5.1 |
