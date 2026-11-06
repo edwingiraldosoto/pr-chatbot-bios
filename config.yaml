@@ -1,0 +1,93 @@
+# Configuración del asistente (todo lo que NO es secreto).
+#
+# - Los secretos (TELEGRAM_BOT_TOKEN, LLM_API_KEY) van en .env, nunca aquí.
+# - Cualquier valor se puede sobrescribir con una variable de entorno con el nombre que
+#   aparece en el comentario, por ejemplo RETRIEVAL_TOP_K=6.
+# - Las rutas relativas se resuelven respecto a la carpeta de este archivo.
+# - Contrato completo y rangos válidos: specs/contracts/config.md
+
+llm:
+  # LLM_PROVIDER: anthropic | openai | gemini.
+  # Con "openai" y base_url se puede usar cualquier API compatible (Groq, Ollama, etc.).
+  provider: anthropic
+  # LLM_MODEL: ID del modelo del proveedor elegido.
+  model: claude-haiku-5-5
+  # LLM_BASE_URL: solo para provider=openai con APIs compatibles; vacío = API oficial.
+  base_url: ""
+  # LLM_TEMPERATURE (0-1): baja para respuestas factuales y reproducibles.
+  temperature: 0.1
+  # LLM_MAX_TOKENS: máximo de tokens de cada respuesta; acota el costo por consulta.
+  max_tokens: 600
+  # LLM_TIMEOUT_SECONDS: tiempo máximo de espera por respuesta del modelo.
+  timeout_seconds: 30
+  # LLM_MAX_RETRIES: reintentos ante errores transitorios (429, 5xx, red).
+  max_retries: 2
+
+embeddings:
+  # EMBEDDING_PROVIDER: "local" (modelo descargado una vez, sin API key ni costo).
+  provider: local
+  # EMBEDDING_MODEL: si cambia, el índice se reconstruye solo.
+  model: intfloat/multilingual-e5-small
+
+knowledge_base:
+  # KNOWLEDGE_BASE_PATH: carpeta con los documentos (.md, .txt, .pdf, .docx).
+  path: ./knowledge_base
+
+chunking:
+  # CHUNK_SIZE: tamaño máximo de cada fragmento, en caracteres.
+  size: 800
+  # CHUNK_OVERLAP: caracteres compartidos entre fragmentos consecutivos (< CHUNK_SIZE).
+  overlap: 150
+
+retrieval:
+  # RETRIEVAL_TOP_K: fragmentos recuperados por pregunta.
+  top_k: 5
+  # SIMILARITY_THRESHOLD (0-1): similitud mínima para considerar relevante un fragmento.
+  # Si ninguno la alcanza, el bot responde "no encontrado" sin llamar al modelo.
+  similarity_threshold: 0.80
+
+prompts:
+  # SYSTEM_PROMPT_PATH: reglas del asistente (no van en el código).
+  system_prompt_path: ./prompts/system_prompt.md
+  # REWRITE_PROMPT_PATH: instrucciones para reformular preguntas de seguimiento.
+  rewrite_prompt_path: ./prompts/rewrite_prompt.md
+
+history:
+  # HISTORY_LENGTH: mensajes (del usuario y del bot) que se conservan por usuario; 0 = sin historial.
+  length: 6
+
+access:
+  # ALLOWED_USER_IDS / ADMIN_USER_IDS: IDs numéricos de Telegram. Normalmente se definen en
+  # .env (cambian por despliegue); si se definen allí, reemplazan estos valores.
+  # Los administradores tienen acceso aunque no estén en allowed_user_ids.
+  allowed_user_ids: []
+  admin_user_ids: []
+  # RATE_LIMIT_PER_MINUTE: mensajes máximos por usuario por minuto.
+  rate_limit_per_minute: 10
+
+logging:
+  # LOG_LEVEL: DEBUG | INFO | WARNING | ERROR.
+  level: INFO
+  # LOG_QUESTIONS: registrar el texto de las preguntas en el log (privacidad: false por defecto).
+  log_questions: false
+
+storage:
+  # DATA_DIR: índice vectorial, manifest y base SQLite. Se regenera; no se versiona.
+  data_dir: ./data
+
+reindex:
+  # REINDEX_SCHEDULE_TIME: hora diaria de reindexación (HH:MM); vacío = desactivada.
+  schedule_time: ""
+  # REINDEX_TIMEZONE: zona horaria IANA de la hora anterior.
+  timezone: America/Bogota
+  # REINDEX_NOTIFY_ADMINS: avisar a los administradores si hubo cambios o errores.
+  notify_admins: true
+
+ingest:
+  # INJECTION_CHECK: off | warn | quarantine. Revisión de texto que intenta dar
+  # instrucciones al asistente dentro de los documentos.
+  injection_check: warn
+
+bot:
+  # SOURCE_DOWNLOAD: botón para descargar el documento citado.
+  source_download: false

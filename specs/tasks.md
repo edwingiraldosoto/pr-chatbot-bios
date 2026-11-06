@@ -30,11 +30,11 @@ referencian sus tareas (`feat(index): … [T-14, T-15]`).
 
 **Propósito**: estructura, herramientas de calidad, configuración, logs y prompts.
 
-- [ ] T-01 Estructura `src/mesa_ayuda/`, `pyproject.toml` con dependencias fijadas, configuración de `ruff`, `mypy` y `pytest`, `.gitattributes` (fin de línea LF) — `pyproject.toml`, `src/mesa_ayuda/__init__.py`, `tests/conftest.py` — RNF-07
-- [ ] T-02 [US7] Carga y validación de configuración (`.env` + `config.yaml` + entorno, precedencia y reglas de [contracts/config.md](contracts/config.md)) con pruebas: secreto faltante, defaults, overlap ≥ size, IDs inválidos, override por entorno — `src/mesa_ayuda/config.py`, `tests/unit/test_config.py` — RNF-01
-- [ ] T-03 [P] [US7] `config.yaml` con todos los parámetros comentados y `.env.example` con todas las variables, valor de ejemplo y comentario — `config.yaml`, `.env.example` — RNF-01, CA-R2.2
-- [ ] T-04 [P] Logs estructurados JSON con ID de solicitud y redacción de secretos, con prueba de que el token no aparece — `src/mesa_ayuda/logging_setup.py`, `tests/unit/test_logging.py` — RNF-03, RNF-06
-- [ ] T-05 [P] [US1] Prompt de sistema y prompt de reformulación según [contracts/prompt.md](contracts/prompt.md) — `prompts/system_prompt.md`, `prompts/rewrite_prompt.md` — RF-03, RF-04, RF-12, RNF-04
+- [x] T-01 Estructura `src/mesa_ayuda/`, `pyproject.toml` con dependencias fijadas, configuración de `ruff`, `mypy` y `pytest`, `.gitattributes` (fin de línea LF) — `pyproject.toml`, `src/mesa_ayuda/__init__.py`, `tests/conftest.py` — RNF-07
+- [x] T-02 [US7] Carga y validación de configuración (`.env` + `config.yaml` + entorno, precedencia y reglas de [contracts/config.md](contracts/config.md)) con pruebas: secreto faltante, defaults, overlap ≥ size, IDs inválidos, override por entorno — `src/mesa_ayuda/config.py`, `tests/unit/test_config.py` — RNF-01
+- [x] T-03 [P] [US7] `config.yaml` con todos los parámetros comentados y `.env.example` con todas las variables, valor de ejemplo y comentario — `config.yaml`, `.env.example` — RNF-01, CA-R2.2
+- [x] T-04 [P] Logs estructurados JSON con ID de solicitud y redacción de secretos, con prueba de que el token no aparece — `src/mesa_ayuda/logging_setup.py`, `tests/unit/test_logging.py` — RNF-03, RNF-06
+- [x] T-05 [P] [US1] Prompt de sistema y prompt de reformulación según [contracts/prompt.md](contracts/prompt.md) — `prompts/system_prompt.md`, `prompts/rewrite_prompt.md` — RF-03, RF-04, RF-12, RNF-04
 
 **Punto de control**: `python -m pytest` y la configuración se cargan sin errores.
 
@@ -59,7 +59,7 @@ referencian sus tareas (`feat(index): … [T-14, T-15]`).
 
 **Propósito**: índice persistente, incremental y seguro ante consultas concurrentes.
 
-- [ ] T-12 Interfaz `Embedder`, `LocalE5Embedder` (prefijos `query:`/`passage:`) y `FakeEmbedder`; medir tamaño y tiempo de instalación y registrar si se cambia a `fastembed` — `src/mesa_ayuda/embeddings.py`, `tests/unit/test_embeddings.py` — RF-02
+- [ ] T-12 Interfaz `Embedder`, `LocalE5Embedder` (prefijos `query:`/`passage:`) y `FakeEmbedder`; medir tamaño y tiempo de instalación y registrar si se cambia a `fastembed` (medición en S2: `pip install -e .[dev]` tardó 14 min y el entorno ocupa 1,6 GB, casi todo torch) — `src/mesa_ayuda/embeddings.py`, `tests/unit/test_embeddings.py` — RF-02
 - [ ] T-13 Envoltura de Chroma persistente con distancia coseno y filtro por versiones activas — `src/mesa_ayuda/vectorstore.py`, `tests/integration/test_vectorstore.py` — RF-02 (CA-02.4, CA-02.5)
 - [ ] T-14 [P] [US6] Manifest: lectura, escritura atómica y cálculo de diferencias (nuevo, cambiado, sin cambios, eliminado, renombrado) — `src/mesa_ayuda/indexing/manifest.py`, `tests/unit/test_manifest.py` — RF-09 (CA-09.1, CA-09.4)
 - [ ] T-15 [US6] Indexador incremental con cambio de versión por documento, retiro de ilegibles y eliminados, `ReindexSummary` — `src/mesa_ayuda/indexing/indexer.py`, `tests/integration/test_indexer.py` — RF-02, RF-09 (CA-09.2, CA-09.3, CA-09.6)
@@ -102,7 +102,7 @@ una irrelevante devuelve "no encontrado" sin llamar al LLM.
 - [ ] T-29 [US5] Comandos `/start`, `/help` (por rol), `/reset`, `/fuentes` — `src/mesa_ayuda/bot/handlers.py`, `tests/unit/test_handlers.py` — RF-06
 - [ ] T-30 [US1] [US2] Manejador de texto (typing, servicio de respuesta, errores) y de mensajes no textuales — `src/mesa_ayuda/bot/handlers.py`, `tests/unit/test_handlers.py` — RF-03, RNF-05
 - [ ] T-31 [US6] `/reindex` y `/reindex full` solo para administradores, con resumen — `src/mesa_ayuda/bot/handlers.py`, `tests/unit/test_handlers.py` — RF-08
-- [ ] T-32 [US7] Punto de entrada: config → logs → indexación inicial → polling — `src/mesa_ayuda/__main__.py` — RNF-02
+- [ ] T-32 [US7] Punto de entrada: config → logs → indexación inicial → polling; stdout/stderr en UTF-8 para que los errores de configuración se lean bien en la consola de Windows — `src/mesa_ayuda/__main__.py` — RNF-02
 - [ ] T-33 [P] [US8] Exportación de preguntas sin respuesta a CSV — `scripts/unanswered.py` — RF-10 (CA-10.2)
 
 **Punto de control**: obligatorios RF-01 a RF-07 y deseables RF-08 a RF-10 funcionando en Telegram.
@@ -175,11 +175,11 @@ Estado al momento de la entrega (se actualiza al cerrar cada fase).
 
 | Tarea | Requisitos | Fase | Estado | Commit |
 |---|---|---|---|---|
-| T-01 | RNF-07 | S2 | Pendiente | — |
-| T-02 | RNF-01 | S2 | Pendiente | — |
-| T-03 | RNF-01 | S2 | Pendiente | — |
-| T-04 | RNF-03, RNF-06 | S2 | Pendiente | — |
-| T-05 | RF-03, RF-04, RF-12, RNF-04 | S2 | Pendiente | — |
+| T-01 | RNF-07 | S2 | Terminada | — |
+| T-02 | RNF-01 | S2 | Terminada | — |
+| T-03 | RNF-01 | S2 | Terminada | — |
+| T-04 | RNF-03, RNF-06 | S2 | Terminada | — |
+| T-05 | RF-03, RF-04, RF-12, RNF-04 | S2 | Terminada | — |
 | T-06 | RF-01 | S3 | Pendiente | — |
 | T-07 | RF-01 | S3 | Pendiente | — |
 | T-08 | RF-01 | S3 | Pendiente | — |

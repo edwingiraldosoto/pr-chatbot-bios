@@ -56,3 +56,20 @@ secciones con 1–2 commits por sección después de probar cada una.
 - Revisión cruzada automática spec ↔ tasks: 21 requisitos, todos con al menos una tarea;
   45 tareas, ninguna referencia rota; sin marcadores pendientes.
 - Versiones de las dependencias consultadas en PyPI (`pip index versions`), no de memoria.
+
+### 2026-11-06 — Estructura y configuración (S2: T-01 a T-05)
+
+**Criterio aplicado a lo generado**:
+- La herramienta escribió una función auxiliar `redact_mapping` que nadie usaba; la quité
+  antes del commit (constitución, principio IV).
+- Riesgo detectado al revisar los logs: `httpx`, que usa python-telegram-bot, registra en
+  INFO la URL de cada llamada, y esa URL contiene el token del bot. Se resolvió con dos
+  barreras: subir esos loggers a WARNING y redactar secretos en todos los logs, incluidos
+  los de librerías. Una prueba lo cubre (`test_token_in_third_party_log_url_is_redacted`).
+- En Windows, `zoneinfo` no trae la base de zonas horarias: se agregó `tzdata` como
+  dependencia para que la validación de `REINDEX_TIMEZONE` funcione en el equipo del
+  evaluador.
+- Una clave mal escrita en `config.yaml` (`retrieval.topk`) se habría ignorado en silencio
+  con la configuración por defecto de pydantic; se decidió rechazarla con un error.
+- Pruebas que verifican la coherencia entre código, `config.yaml` y `.env.example`, para
+  que agregar un parámetro sin documentarlo haga fallar la suite.
