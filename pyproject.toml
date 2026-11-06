@@ -1,0 +1,87 @@
+[build-system]
+requires = ["setuptools>=75", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mesa-ayuda-rag"
+version = "0.1.0"
+description = "Asistente de mesa de ayuda en Telegram que responde con RAG sobre documentos internos."
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [{ name = "Edwin Giraldo Soto" }]
+# Rangos acotados a la versión mayor probada (ver specs/plan.md, "Contexto técnico").
+dependencies = [
+    "python-telegram-bot[job-queue]>=22.8,<23",
+    "chromadb>=1.5,<2",
+    "sentence-transformers>=6.2,<7",
+    "pypdf>=7.0,<8",
+    "python-docx>=1.2,<2",
+    "pydantic>=2.10,<3",
+    "pydantic-settings>=2.16,<3",
+    "PyYAML>=6.0,<7",
+    "structlog>=26.1,<27",
+    "anthropic>=2.6,<3",
+    "openai>=3.46,<4",
+    # En Windows zoneinfo no trae base de zonas horarias; tzdata la provee.
+    "tzdata>=2024.1",
+]
+
+[project.optional-dependencies]
+gemini = ["google-genai>=3.0,<4"]
+dev = [
+    "pytest>=9.2,<10",
+    "pytest-asyncio>=1.0",
+    "ruff>=0.17,<0.18",
+    "mypy>=2.4,<3",
+    "types-PyYAML",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+addopts = "-ra"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "tests", "scripts"]
+extend-exclude = [".specify", ".claude", "*.md"]
+
+[tool.ruff.lint]
+select = [
+    "E", "W",   # pycodestyle
+    "F",        # pyflakes
+    "I",        # isort
+    "B",        # bugbear
+    "UP",       # pyupgrade
+    "SIM",      # simplificaciones
+    "RUF",      # reglas propias de ruff
+    "D",        # docstrings (CA-R7.3)
+]
+ignore = [
+    "D105", "D107",   # docstrings en métodos mágicos y __init__: el docstring de la clase basta
+    "D203", "D213",   # incompatibles con D211 / D212
+    "RUF001", "RUF002", "RUF003",  # caracteres "ambiguos": el proyecto está en español
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["D"]
+"scripts/**" = ["D103"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+plugins = ["pydantic.mypy"]
+files = ["src"]
+
+[[tool.mypy.overrides]]
+module = ["chromadb.*", "sentence_transformers.*", "docx.*", "pypdf.*"]
+ignore_missing_imports = true

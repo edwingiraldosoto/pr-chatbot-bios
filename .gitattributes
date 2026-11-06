@@ -1,0 +1,9 @@
+# Fin de línea LF en el repositorio para todos los archivos de texto, sin importar el
+# sistema operativo de quien clona (evita diffs ruidosos entre Windows y Linux/Docker).
+* text=auto eol=lf
+
+# Binarios: nunca convertir.
+*.pdf  binary
+*.docx binary
+*.png  binary
+*.jpg  binary
