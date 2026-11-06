@@ -1,0 +1,52 @@
+# --- Secretos (nunca al repositorio) ---
+.env
+.env.*
+!.env.example
+
+# --- Datos generados en tiempo de ejecución ---
+# Índice vectorial, manifest de indexación, base SQLite (historial y preguntas
+# sin respuesta) y resultados de evaluación locales. Se regeneran solos.
+data/
+*.sqlite
+*.sqlite3
+*.db
+chroma/
+manifest.json
+
+# --- Caché de modelos de embeddings descargados ---
+models_cache/
+.cache/
+
+# --- Entornos virtuales y dependencias ---
+.venv/
+venv/
+env/
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+
+# --- Herramientas de calidad ---
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# --- Logs ---
+logs/
+*.log
+
+# --- Sistema operativo y editores ---
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/
+*.swp
+
+# --- Archivos temporales de Office (p. ej. ~$documento.docx) ---
+~$*
