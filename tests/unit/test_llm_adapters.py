@@ -12,6 +12,7 @@ from typing import Any
 
 import anthropic
 import httpx2
+import openai
 import pytest
 
 from mesa_ayuda.llm.anthropic import AnthropicProvider, supports_effort
@@ -23,6 +24,7 @@ from mesa_ayuda.llm.base import (
     LLMTimeoutError,
     TransientLLMError,
 )
+from mesa_ayuda.llm.openai import OpenAIProvider
 
 Handler = Callable[[httpx2.Request], httpx2.Response]
 MESSAGES = [
@@ -145,3 +147,79 @@ async def test_anthropic_errors_are_translated(
 ) -> None:
     with pytest.raises(error, match=match):
         await call(anthropic_provider(handler))
+
+
+# --- OpenAI --------------------------------------------------------------------------------
+
+OPENAI_OK = {
+    "id": "c1",
+    "object": "chat.completion",
+    "created": 0,
+    "model": "gpt-5-mini",
+    "choices": [
+        {
+            "index": 0,
+            "finish_reason": "stop",
+            "message": {"role": "assistant", "content": "Sí [2]."},
+        }
+    ],
+    "usage": {"prompt_tokens": 80, "completion_tokens": 4, "total_tokens": 84},
+}
+
+
+def openai_provider(handler: Handler, base_url: str | None = None) -> OpenAIProvider:
+    client = openai.AsyncOpenAI(
+        api_key="k",
+        base_url=base_url,
+        max_retries=0,
+        http_client=openai.DefaultAsyncHttpxClient(transport=httpx2.MockTransport(handler)),
+    )
+    return OpenAIProvider(
+        api_key="k", model="gpt-5-mini", timeout_seconds=5, base_url=base_url, client=client
+    )
+
+
+async def test_openai_official_api_uses_max_completion_tokens() -> None:
+    recorder = Recorder(status(200, OPENAI_OK))
+
+    result = await call(openai_provider(recorder))
+
+    body = recorder.bodies[0]
+    assert body["messages"][0] == {"role": "system", "content": "SISTEMA"}
+    assert [m["role"] for m in body["messages"][1:]] == ["user", "assistant", "user"]
+    assert body["temperature"] == 0.1 and body["max_completion_tokens"] == 300
+    assert "max_tokens" not in body
+    assert (result.text, result.input_tokens, result.output_tokens) == ("Sí [2].", 80, 4)
+
+
+async def test_openai_compatible_api_uses_max_tokens() -> None:
+    recorder = Recorder(status(200, OPENAI_OK))
+    seen: list[str] = []
+
+    def handler(request: httpx2.Request) -> httpx2.Response:
+        seen.append(str(request.url))
+        return recorder(request)
+
+    await call(openai_provider(handler, base_url="http://localhost:11434/v1"))
+
+    assert seen == ["http://localhost:11434/v1/chat/completions"]
+    assert (
+        recorder.bodies[0]["max_tokens"] == 300
+        and "max_completion_tokens" not in recorder.bodies[0]
+    )
+
+
+@pytest.mark.parametrize(
+    ("handler", "error"),
+    [
+        (status(429), TransientLLMError),
+        (status(503), TransientLLMError),
+        (status(401), LLMAuthError),
+        (status(404), LLMBadRequestError),
+        (raise_timeout, LLMTimeoutError),
+        (raise_network, TransientLLMError),
+    ],
+)
+async def test_openai_errors_are_translated(handler: Handler, error: type[LLMError]) -> None:
+    with pytest.raises(error):
+        await call(openai_provider(handler))
