@@ -55,6 +55,10 @@ class Embedder(Protocol):
     def embed_query(self, text: str) -> list[float]: ...
 ```
 
-- `LocalE5Embedder` antepone `passage: ` / `query: ` y normaliza los vectores.
+- `LocalEmbedder` (fastembed, ONNX en CPU) carga el modelo de `EMBEDDING_MODEL` la primera
+  vez que se usa, antepone los prefijos que exige la familia del modelo (e5: `passage: ` /
+  `query: `) y devuelve vectores normalizados. Acepta los modelos del catálogo de fastembed y
+  los registrados en el proyecto (e5-small); otro nombre falla al arrancar con un mensaje
+  que lista las opciones (`EmbeddingModelError`).
 - `FakeEmbedder` (pruebas): vectores deterministas a partir de bolsa de palabras, de modo
   que textos que comparten palabras quedan cerca.
