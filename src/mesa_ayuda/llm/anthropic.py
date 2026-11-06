@@ -1,12 +1,13 @@
-"""Adaptador de Anthropic (Claude) con el SDK oficial ``anthropic`` (T-21; CA-R1.4).
+"""Adaptador de Anthropic (Claude) con el SDK oficial ``anthropic`` (T-21, T-47; CA-R1.4).
 
-Parámetros probados contra la API el 2026-11-06 (``specs/research.md``, R-05):
+Parámetros probados contra la API el 2026-11-06 (``specs/research.md``, R-05). Todos salen
+de la configuración (CA-R1.6):
 
-* ``temperature`` no se envía: el SDK 2.6 la retiró junto con los demás parámetros de
-  muestreo. ``LLM_TEMPERATURE`` solo aplica a OpenAI y Gemini.
-* ``output_config.effort = "low"``: Haiku 5.5 razona por defecto y esos tokens cuentan
-  dentro de ``max_tokens``; con ``low`` respondió sin razonamiento. Los modelos que no
-  aceptan ``effort`` (Haiku 4.5 y anteriores) lo reciben sin ese parámetro.
+* ``temperature`` nunca se envía: el SDK 2.6 la retiró junto con los demás parámetros de
+  muestreo.
+* ``output_config.effort`` = ``LLM_ANTHROPIC_EFFORT`` (``low`` por defecto): Haiku 5.5
+  razona por defecto y esos tokens cuentan dentro de ``max_tokens``; con ``low`` respondió
+  sin razonamiento. Vacío = no se envía (Haiku 4.5 y anteriores lo rechazan).
 """
 
 from __future__ import annotations
@@ -25,21 +26,6 @@ from mesa_ayuda.llm.base import (
     TransientLLMError,
 )
 
-# Modelos que responden 400 si reciben ``output_config.effort``.
-MODELS_WITHOUT_EFFORT = (
-    "claude-3",
-    "claude-haiku-4",
-    "claude-sonnet-4-0",
-    "claude-sonnet-4-5",
-    "claude-opus-4-0",
-    "claude-opus-4-1",
-)
-
-
-def supports_effort(model: str) -> bool:
-    """``True`` si el modelo acepta ``output_config.effort``."""
-    return not model.startswith(MODELS_WITHOUT_EFFORT)
-
 
 class AnthropicProvider:
     """Llama a la API de Mensajes de Anthropic.
@@ -56,9 +42,11 @@ class AnthropicProvider:
         api_key: str,
         model: str,
         timeout_seconds: float,
+        effort: str | None = "low",
         client: anthropic.AsyncAnthropic | None = None,
     ) -> None:
         self.model = model
+        self.effort = effort
         self._client = client or anthropic.AsyncAnthropic(
             api_key=api_key, timeout=timeout_seconds, max_retries=0
         )
@@ -73,8 +61,8 @@ class AnthropicProvider:
             "system": system,
             "messages": [{"role": m.role, "content": m.content} for m in messages],
         }
-        if supports_effort(self.model):
-            params["output_config"] = {"effort": "low"}
+        if self.effort:
+            params["output_config"] = {"effort": self.effort}
         return params
 
     async def complete(
@@ -82,8 +70,8 @@ class AnthropicProvider:
         system: str,
         messages: Sequence[ChatMessage],
         *,
-        temperature: float,
         max_tokens: int,
+        temperature: float | None = None,
     ) -> LLMResult:
         """Genera la respuesta. ``temperature`` se ignora (ver la documentación del módulo)."""
         del temperature
@@ -97,7 +85,8 @@ class AnthropicProvider:
             raise TransientLLMError(f"Anthropic: error de red ({error})") from error
         except (anthropic.AuthenticationError, anthropic.PermissionDeniedError) as error:
             raise LLMAuthError(
-                f"Anthropic rechazó la API key (HTTP {error.status_code}); revisa LLM_API_KEY"
+                f"Anthropic rechazó la API key (HTTP {error.status_code}); "
+                f"revisa LLM_ANTHROPIC_API_KEY o LLM_API_KEY"
             ) from error
         except (anthropic.BadRequestError, anthropic.NotFoundError) as error:
             raise LLMBadRequestError(

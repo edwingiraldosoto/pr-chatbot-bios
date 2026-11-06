@@ -162,8 +162,8 @@ class AnswerService:
         provider: Proveedor de LLM (con su política de tiempo y reintentos).
         rewriter: Reformulador de seguimientos.
         system_prompt: Contenido de ``SYSTEM_PROMPT_PATH``.
-        temperature: ``LLM_TEMPERATURE``.
-        max_tokens: ``LLM_MAX_TOKENS``.
+        max_tokens: ``LLM_MAX_TOKENS``. La temperatura y los demás parámetros del modelo
+            son del perfil del proveedor (:attr:`Settings.llm`).
     """
 
     def __init__(
@@ -173,14 +173,12 @@ class AnswerService:
         provider: LLMProvider,
         rewriter: QuestionRewriter,
         system_prompt: str,
-        temperature: float,
         max_tokens: int,
     ) -> None:
         self._retriever = retriever
         self._provider = provider
         self._rewriter = rewriter
         self._system_prompt = system_prompt
-        self._temperature = temperature
         self._max_tokens = max_tokens
 
     async def answer(self, question: str, history: Sequence[ChatMessage] = ()) -> Answer:
@@ -221,7 +219,6 @@ class AnswerService:
         result = await self._provider.complete(
             prompt.system,
             prompt.messages,
-            temperature=self._temperature,
             max_tokens=self._max_tokens,
         )
         usage = Usage(

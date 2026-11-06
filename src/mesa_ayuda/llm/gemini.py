@@ -1,7 +1,7 @@
-"""Adaptador de Google Gemini con el SDK ``google-genai`` (T-23; CA-R1.4).
+"""Adaptador de Google Gemini con el SDK ``google-genai`` (T-23, T-47; CA-R1.4).
 
-Es opcional: el paquete se instala con ``pip install -e ".[gemini]"``. Si falta y se elige
-``LLM_PROVIDER=gemini``, el arranque falla con un mensaje que dice cómo instalarlo.
+``google-genai`` es una dependencia normal: elegir ``LLM_PROVIDER=gemini`` no exige
+instalar nada. La temperatura sale de ``LLM_GEMINI_TEMPERATURE`` (vacía = la de fábrica).
 """
 
 from __future__ import annotations
@@ -10,6 +10,9 @@ from collections.abc import Sequence
 from typing import Any
 
 import httpx2
+from google import genai
+from google.genai import errors as genai_errors
+from google.genai import types as genai_types
 
 from mesa_ayuda.llm.base import (
     ChatMessage,
@@ -19,15 +22,6 @@ from mesa_ayuda.llm.base import (
     LLMTimeoutError,
     TransientLLMError,
 )
-
-try:
-    from google import genai
-    from google.genai import errors as genai_errors
-    from google.genai import types as genai_types
-
-    GENAI_INSTALLED = True
-except ImportError:  # pragma: no cover - depende de lo instalado
-    GENAI_INSTALLED = False
 
 
 class GeminiProvider:
@@ -41,13 +35,11 @@ class GeminiProvider:
         api_key: str,
         model: str,
         timeout_seconds: float,
+        temperature: float | None = None,
         httpx_async_client: httpx2.AsyncClient | None = None,
     ) -> None:
-        if not GENAI_INSTALLED:
-            raise LLMBadRequestError(
-                'LLM_PROVIDER=gemini necesita el paquete opcional: pip install -e ".[gemini]"'
-            )
         self.model = model
+        self.temperature = temperature
         self._client = genai.Client(
             api_key=api_key,
             http_options=genai_types.HttpOptions(
@@ -66,10 +58,18 @@ class GeminiProvider:
         system: str,
         messages: Sequence[ChatMessage],
         *,
-        temperature: float,
         max_tokens: int,
+        temperature: float | None = None,
     ) -> dict[str, Any]:
-        """Argumentos de ``generate_content`` (Gemini llama ``model`` al asistente)."""
+        """Argumentos de ``generate_content`` (Gemini llama ``model`` al asistente).
+
+        ``temperature`` de la llamada reemplaza la del perfil, salvo que el perfil no tenga:
+        entonces no se envía y el modelo usa la suya.
+        """
+        if self.temperature is None:
+            temperature = None
+        elif temperature is None:
+            temperature = self.temperature
         contents = [
             genai_types.Content(
                 role="model" if m.role == "assistant" else "user",
@@ -87,13 +87,13 @@ class GeminiProvider:
         system: str,
         messages: Sequence[ChatMessage],
         *,
-        temperature: float,
         max_tokens: int,
+        temperature: float | None = None,
     ) -> LLMResult:
         """Genera la respuesta y traduce los errores del SDK."""
         try:
             response = await self._client.aio.models.generate_content(
-                **self.request(system, messages, temperature=temperature, max_tokens=max_tokens)
+                **self.request(system, messages, max_tokens=max_tokens, temperature=temperature)
             )
         except genai_errors.APIError as error:
             raise _translate(error) from error
@@ -114,7 +114,9 @@ class GeminiProvider:
 def _translate(error: Any) -> Exception:
     code = int(error.code or 0)
     if code in (401, 403):
-        return LLMAuthError(f"Gemini rechazó la API key (HTTP {code}); revisa LLM_API_KEY")
+        return LLMAuthError(
+            f"Gemini rechazó la API key (HTTP {code}); revisa LLM_GEMINI_API_KEY o LLM_API_KEY"
+        )
     if code == 429 or code >= 500:
         return TransientLLMError(f"Gemini: HTTP {code}")
     return LLMBadRequestError(f"Gemini rechazó la petición (HTTP {code}): {error.message}")

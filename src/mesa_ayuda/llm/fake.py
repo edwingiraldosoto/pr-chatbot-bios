@@ -17,7 +17,7 @@ class FakeCall:
 
     system: str
     messages: tuple[ChatMessage, ...]
-    temperature: float
+    temperature: float | None
     max_tokens: int
 
 
@@ -45,8 +45,8 @@ class FakeProvider:
         system: str,
         messages: Sequence[ChatMessage],
         *,
-        temperature: float,
         max_tokens: int,
+        temperature: float | None = None,
     ) -> LLMResult:
         """Registra la llamada y devuelve la siguiente respuesta programada."""
         self.calls.append(FakeCall(system, tuple(messages), temperature, max_tokens))

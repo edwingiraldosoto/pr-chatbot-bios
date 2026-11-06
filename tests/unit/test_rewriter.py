@@ -28,6 +28,15 @@ async def test_follow_up_is_rewritten_with_the_history() -> None:
     assert result.input_tokens > 0
 
 
+async def test_rewrite_max_tokens_is_configurable() -> None:
+    # LLM_REWRITE_MAX_TOKENS: los modelos que razonan pueden necesitar más de 100.
+    fake = FakeProvider(replies=["¿Se acumulan las vacaciones?"])
+
+    await QuestionRewriter(fake, "R", max_tokens=400).rewrite("¿y eso?", HISTORY)
+
+    assert fake.calls[0].max_tokens == 400
+
+
 async def test_without_history_there_is_no_llm_call() -> None:
     fake = FakeProvider()
 

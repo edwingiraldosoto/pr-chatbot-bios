@@ -15,7 +15,7 @@ import httpx2
 import openai
 import pytest
 
-from mesa_ayuda.llm.anthropic import AnthropicProvider, supports_effort
+from mesa_ayuda.llm.anthropic import AnthropicProvider
 from mesa_ayuda.llm.base import (
     ChatMessage,
     LLMAuthError,
@@ -61,8 +61,8 @@ def raise_network(request: httpx2.Request) -> httpx2.Response:
     raise httpx2.ConnectError("sin red", request=request)
 
 
-async def call(provider: Any) -> Any:
-    return await provider.complete("SISTEMA", MESSAGES, temperature=0.1, max_tokens=300)
+async def call(provider: Any, temperature: float | None = None) -> Any:
+    return await provider.complete("SISTEMA", MESSAGES, max_tokens=300, temperature=temperature)
 
 
 # --- Anthropic -----------------------------------------------------------------------------
@@ -79,19 +79,21 @@ ANTHROPIC_OK = {
 }
 
 
-def anthropic_provider(handler: Handler, model: str = "claude-haiku-5-5") -> AnthropicProvider:
+def anthropic_provider(handler: Handler, effort: str | None = "low") -> AnthropicProvider:
     client = anthropic.AsyncAnthropic(
         api_key="k",
         max_retries=0,
         http_client=anthropic.DefaultAsyncHttpxClient(transport=httpx2.MockTransport(handler)),
     )
-    return AnthropicProvider(api_key="k", model=model, timeout_seconds=5, client=client)
+    return AnthropicProvider(
+        api_key="k", model="claude-haiku-5-5", timeout_seconds=5, effort=effort, client=client
+    )
 
 
 async def test_anthropic_request_and_response() -> None:
     recorder = Recorder(status(200, ANTHROPIC_OK))
 
-    result = await call(anthropic_provider(recorder))
+    result = await call(anthropic_provider(recorder), temperature=0.0)
 
     body = recorder.bodies[0]
     assert body["system"] == "SISTEMA" and body["max_tokens"] == 300
@@ -105,27 +107,22 @@ async def test_anthropic_request_and_response() -> None:
     )
 
 
-async def test_anthropic_older_models_get_no_effort() -> None:
+@pytest.mark.parametrize("effort", ["medium", "high"])
+async def test_anthropic_effort_comes_from_the_profile(effort: str) -> None:
     recorder = Recorder(status(200, ANTHROPIC_OK))
 
-    await call(anthropic_provider(recorder, model="claude-haiku-4-5"))
+    await call(anthropic_provider(recorder, effort=effort))
+
+    assert recorder.bodies[0]["output_config"] == {"effort": effort}
+
+
+async def test_anthropic_empty_effort_is_not_sent() -> None:
+    # Haiku 4.5 y anteriores rechazan effort: LLM_ANTHROPIC_EFFORT vacío, sin tocar código.
+    recorder = Recorder(status(200, ANTHROPIC_OK))
+
+    await call(anthropic_provider(recorder, effort=None))
 
     assert "output_config" not in recorder.bodies[0]
-
-
-@pytest.mark.parametrize(
-    ("model", "expected"),
-    [
-        ("claude-haiku-5-5", True),
-        ("claude-sonnet-5-5", True),
-        ("claude-opus-4-5", True),
-        ("claude-haiku-4-5", False),
-        ("claude-sonnet-4-5", False),
-        ("claude-3-7-sonnet", False),
-    ],
-)
-def test_supports_effort(model: str, expected: bool) -> None:
-    assert supports_effort(model) is expected
 
 
 @pytest.mark.parametrize(
@@ -134,7 +131,7 @@ def test_supports_effort(model: str, expected: bool) -> None:
         (status(429), TransientLLMError, "429"),
         (status(529), TransientLLMError, "529"),
         (status(500), TransientLLMError, "500"),
-        (status(401), LLMAuthError, "LLM_API_KEY"),
+        (status(401), LLMAuthError, "LLM_ANTHROPIC_API_KEY"),
         (status(403), LLMAuthError, "403"),
         (status(404), LLMBadRequestError, "404"),
         (status(400), LLMBadRequestError, "400"),
@@ -168,7 +165,9 @@ OPENAI_OK = {
 }
 
 
-def openai_provider(handler: Handler, base_url: str | None = None) -> OpenAIProvider:
+def openai_provider(
+    handler: Handler, base_url: str | None = None, **profile: Any
+) -> OpenAIProvider:
     client = openai.AsyncOpenAI(
         api_key="k",
         base_url=base_url,
@@ -176,20 +175,27 @@ def openai_provider(handler: Handler, base_url: str | None = None) -> OpenAIProv
         http_client=openai.DefaultAsyncHttpxClient(transport=httpx2.MockTransport(handler)),
     )
     return OpenAIProvider(
-        api_key="k", model="gpt-5-mini", timeout_seconds=5, base_url=base_url, client=client
+        api_key="k",
+        model="gpt-5-mini",
+        timeout_seconds=5,
+        base_url=base_url,
+        client=client,
+        **profile,
     )
 
 
 async def test_openai_official_api_uses_max_completion_tokens() -> None:
     recorder = Recorder(status(200, OPENAI_OK))
 
-    result = await call(openai_provider(recorder))
+    result = await call(openai_provider(recorder, reasoning_effort="low"), temperature=0.0)
 
     body = recorder.bodies[0]
     assert body["messages"][0] == {"role": "system", "content": "SISTEMA"}
     assert [m["role"] for m in body["messages"][1:]] == ["user", "assistant", "user"]
-    assert body["temperature"] == 0.1 and body["max_completion_tokens"] == 300
-    assert "max_tokens" not in body
+    assert body["max_completion_tokens"] == 300 and "max_tokens" not in body
+    assert body["reasoning_effort"] == "low"
+    # Perfil sin temperatura (GPT-5): no se envía aunque la llamada pida 0.
+    assert "temperature" not in body
     assert (result.text, result.input_tokens, result.output_tokens) == ("Sí [2].", 80, 4)
 
 
@@ -208,6 +214,26 @@ async def test_openai_compatible_api_uses_max_tokens() -> None:
         recorder.bodies[0]["max_tokens"] == 300
         and "max_completion_tokens" not in recorder.bodies[0]
     )
+
+
+async def test_openai_profile_temperature_and_call_override() -> None:
+    recorder = Recorder(status(200, OPENAI_OK))
+    provider = openai_provider(recorder, temperature=0.1)
+
+    await call(provider)
+    await call(provider, temperature=0.0)
+
+    assert [body["temperature"] for body in recorder.bodies] == [0.1, 0.0]
+    assert all("reasoning_effort" not in body for body in recorder.bodies)
+
+
+@pytest.mark.parametrize("token_param", ["max_tokens", "max_completion_tokens"])
+async def test_openai_token_param_can_be_forced(token_param: str) -> None:
+    recorder = Recorder(status(200, OPENAI_OK))
+
+    await call(openai_provider(recorder, base_url="http://x/v1", token_param=token_param))
+
+    assert recorder.bodies[0][token_param] == 300
 
 
 @pytest.mark.parametrize(
@@ -249,11 +275,12 @@ class Counting:
         return self._handler(request)
 
 
-def gemini_provider(handler: Handler) -> GeminiProvider:
+def gemini_provider(handler: Handler, temperature: float | None = 0.1) -> GeminiProvider:
     return GeminiProvider(
         api_key="k",
-        model="gemini-3-flash",
+        model="gemini-2.5-flash",
         timeout_seconds=5,
+        temperature=temperature,
         httpx_async_client=httpx2.AsyncClient(transport=httpx2.MockTransport(handler)),
     )
 
@@ -268,6 +295,22 @@ async def test_gemini_request_and_response() -> None:
     assert body["systemInstruction"]["parts"][0]["text"] == "SISTEMA"
     assert body["generationConfig"] == {"temperature": 0.1, "maxOutputTokens": 300}
     assert (result.text, result.input_tokens, result.output_tokens) == ("Son 15 días [1].", 70, 6)
+
+
+async def test_gemini_call_temperature_overrides_the_profile() -> None:
+    recorder = Recorder(status(200, GEMINI_OK))
+
+    await call(gemini_provider(recorder), temperature=0.0)
+
+    assert recorder.bodies[0]["generationConfig"]["temperature"] == 0.0
+
+
+async def test_gemini_profile_without_temperature_sends_none() -> None:
+    recorder = Recorder(status(200, GEMINI_OK))
+
+    await call(gemini_provider(recorder, temperature=None), temperature=0.0)
+
+    assert "temperature" not in recorder.bodies[0]["generationConfig"]
 
 
 @pytest.mark.parametrize(

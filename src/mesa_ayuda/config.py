@@ -2,8 +2,11 @@
 
 Contrato completo en ``specs/contracts/config.md``. Resumen:
 
-* Los **secretos** (``TELEGRAM_BOT_TOKEN``, ``LLM_API_KEY``) solo se leen del entorno o de
-  ``.env``; nunca de ``config.yaml``, que está versionado.
+* Los **secretos** (``TELEGRAM_BOT_TOKEN`` y las API keys de los proveedores de LLM) solo
+  se leen del entorno o de ``.env``; nunca de ``config.yaml``, que está versionado.
+* Cada proveedor de LLM tiene su **perfil** (modelo, API key y parámetros propios), así que
+  cambiar de proveedor es cambiar ``LLM_PROVIDER`` y reiniciar (CA-R1.6). Ver
+  :attr:`Settings.llm`.
 * El resto de parámetros vive en ``config.yaml`` (anidado y comentado) y cualquiera se puede
   sobrescribir con una variable de entorno con el nombre del enunciado
   (``RETRIEVAL_TOP_K=6``).
@@ -19,6 +22,7 @@ import re
 from collections.abc import Iterator, Mapping
 from contextlib import contextmanager
 from contextvars import ContextVar
+from dataclasses import dataclass
 from datetime import time
 from pathlib import Path
 from typing import Annotated, Any, Literal
@@ -42,8 +46,18 @@ YAML_PATHS: dict[str, tuple[str, str]] = {
     "llm_base_url": ("llm", "base_url"),
     "llm_temperature": ("llm", "temperature"),
     "llm_max_tokens": ("llm", "max_tokens"),
+    "llm_rewrite_max_tokens": ("llm", "rewrite_max_tokens"),
     "llm_timeout_seconds": ("llm", "timeout_seconds"),
     "llm_max_retries": ("llm", "max_retries"),
+    "llm_anthropic_model": ("anthropic", "model"),
+    "llm_anthropic_effort": ("anthropic", "effort"),
+    "llm_openai_model": ("openai", "model"),
+    "llm_openai_base_url": ("openai", "base_url"),
+    "llm_openai_temperature": ("openai", "temperature"),
+    "llm_openai_reasoning_effort": ("openai", "reasoning_effort"),
+    "llm_openai_token_param": ("openai", "token_param"),
+    "llm_gemini_model": ("gemini", "model"),
+    "llm_gemini_temperature": ("gemini", "temperature"),
     "embedding_provider": ("embeddings", "provider"),
     "embedding_model": ("embeddings", "model"),
     "knowledge_base_path": ("knowledge_base", "path"),
@@ -68,7 +82,37 @@ YAML_PATHS: dict[str, tuple[str, str]] = {
 }
 
 #: Campos que nunca se aceptan desde ``config.yaml`` porque ese archivo se versiona.
-SECRET_FIELDS = ("telegram_bot_token", "llm_api_key")
+SECRET_FIELDS = (
+    "telegram_bot_token",
+    "llm_api_key",
+    "llm_anthropic_api_key",
+    "llm_openai_api_key",
+    "llm_gemini_api_key",
+)
+
+LLMProviderName = Literal["anthropic", "openai", "gemini"]
+
+#: Prefijo esperado del ID de modelo de cada proveedor; si no coincide se advierte al
+#: arrancar (un ``LLM_MODEL`` olvidado al cambiar de proveedor). OpenAI no se revisa porque
+#: con una URL propia sirve modelos de cualquier familia.
+MODEL_PREFIXES: dict[str, tuple[str, ...]] = {
+    "anthropic": ("claude",),
+    "gemini": ("gemini", "gemma"),
+}
+
+#: Campos opcionales: un valor vacío (o ``none``) significa "sin valor" (no se envía).
+OPTIONAL_FIELDS = (
+    *SECRET_FIELDS[1:],
+    "llm_model",
+    "llm_base_url",
+    "llm_temperature",
+    "llm_anthropic_effort",
+    "llm_openai_base_url",
+    "llm_openai_temperature",
+    "llm_openai_reasoning_effort",
+    "llm_gemini_temperature",
+    "reindex_schedule_time",
+)
 
 #: Campos de tipo ruta que se resuelven respecto a la carpeta de ``config.yaml``, para que
 #: el bot funcione igual sin importar desde qué directorio se ejecute.
@@ -95,6 +139,31 @@ def describe_field(field: str) -> str:
     if field in YAML_PATHS:
         return f"{env_name(field)} (config.yaml: {'.'.join(YAML_PATHS[field])})"
     return env_name(field)
+
+
+@dataclass(frozen=True)
+class LLMSettings:
+    """Configuración resuelta del proveedor de LLM activo.
+
+    Attributes:
+        provider: Proveedor elegido en ``LLM_PROVIDER``.
+        model: ID del modelo.
+        api_key: API key del proveedor.
+        base_url: URL de una API compatible (solo ``openai``), o ``None``.
+        temperature: Temperatura, o ``None`` para no enviarla.
+        effort: Esfuerzo de razonamiento, o ``None`` para no enviarlo.
+        token_param: Nombre del límite de salida en OpenAI (``auto`` lo decide).
+        origins: De qué parámetro salió cada valor, para el registro de arranque.
+    """
+
+    provider: LLMProviderName
+    model: str
+    api_key: SecretStr
+    base_url: str | None
+    temperature: float | None
+    effort: str | None
+    token_param: str
+    origins: dict[str, str]
 
 
 class _YamlSource(PydanticBaseSettingsSource):
@@ -125,16 +194,34 @@ class Settings(BaseSettings):
 
     # --- Secretos (solo entorno / .env) ---
     telegram_bot_token: SecretStr
-    llm_api_key: SecretStr
+    llm_anthropic_api_key: SecretStr | None = None
+    llm_openai_api_key: SecretStr | None = None
+    llm_gemini_api_key: SecretStr | None = None
+    #: Genérica del enunciado: API key del proveedor activo si no tiene la suya.
+    llm_api_key: SecretStr | None = None
 
-    # --- Modelo de lenguaje ---
-    llm_provider: Literal["anthropic", "openai", "gemini"] = "anthropic"
-    llm_model: str = "claude-haiku-5-5"
-    llm_base_url: str | None = None
-    llm_temperature: float = Field(0.1, ge=0.0, le=1.0)
+    # --- Modelo de lenguaje: comunes a todos los proveedores ---
+    llm_provider: LLMProviderName = "anthropic"
     llm_max_tokens: int = Field(600, ge=50, le=4000)
+    llm_rewrite_max_tokens: int = Field(100, ge=20, le=1000)
     llm_timeout_seconds: float = Field(30.0, gt=0)
     llm_max_retries: int = Field(2, ge=0, le=5)
+
+    # --- Perfiles por proveedor (CA-R1.6); None = el parámetro no se envía ---
+    llm_anthropic_model: str = "claude-haiku-5-5"
+    llm_anthropic_effort: Literal["low", "medium", "high", "xhigh", "max"] | None = "low"
+    llm_openai_model: str = "gpt-5-mini"
+    llm_openai_base_url: str | None = None
+    llm_openai_temperature: float | None = Field(None, ge=0.0, le=2.0)
+    llm_openai_reasoning_effort: Literal["minimal", "low", "medium", "high"] | None = "low"
+    llm_openai_token_param: Literal["auto", "max_tokens", "max_completion_tokens"] = "auto"
+    llm_gemini_model: str = "gemini-2.5-flash"
+    llm_gemini_temperature: float | None = Field(0.1, ge=0.0, le=2.0)
+
+    # --- Genéricas del enunciado: si se definen, reemplazan al perfil del proveedor activo ---
+    llm_model: str | None = None
+    llm_base_url: str | None = None
+    llm_temperature: float | None = Field(None, ge=0.0, le=2.0)
 
     # --- Embeddings ---
     embedding_provider: Literal["local"] = "local"
@@ -200,10 +287,11 @@ class Settings(BaseSettings):
     def _upper_log_level(cls, value: Any) -> Any:
         return value.upper() if isinstance(value, str) else value
 
-    @field_validator("llm_base_url", "reindex_schedule_time", mode="before")
+    @field_validator(*OPTIONAL_FIELDS, mode="before")
     @classmethod
     def _blank_to_none(cls, value: Any) -> Any:
-        if isinstance(value, str) and not value.strip():
+        """Vacío (o ``none`` desde el entorno, donde no se puede escribir vacío) = sin valor."""
+        if isinstance(value, str) and value.strip().lower() in ("", "none", "null"):
             return None
         return value
 
@@ -225,12 +313,23 @@ class Settings(BaseSettings):
             ) from exc
         return value
 
-    @field_validator("telegram_bot_token", "llm_api_key")
+    @field_validator("telegram_bot_token")
     @classmethod
     def _secret_not_blank(cls, value: SecretStr) -> SecretStr:
         if not value.get_secret_value().strip():
             raise ValueError("no puede estar vacío")
         return value
+
+    @model_validator(mode="after")
+    def _check_llm_key(self) -> Settings:
+        # Solo la key del proveedor activo es obligatoria; las demás pueden esperar en .env.
+        if self._provider_key() is None:
+            provider = self.llm_provider
+            raise ValueError(
+                f"Falta la API key de {provider}: define LLM_{provider.upper()}_API_KEY "
+                "(o LLM_API_KEY) en .env (ver .env.example)"
+            )
+        return self
 
     @model_validator(mode="after")
     def _check_overlap(self) -> Settings:
@@ -257,9 +356,68 @@ class Settings(BaseSettings):
         hour, minute = (int(part) for part in self.reindex_schedule_time.split(":"))
         return time(hour, minute, tzinfo=ZoneInfo(self.reindex_timezone))
 
+    def _provider_key(self) -> tuple[SecretStr, str] | None:
+        """API key del proveedor activo y el nombre de la variable de la que salió."""
+        name = f"llm_{self.llm_provider}_api_key"
+        own: SecretStr | None = getattr(self, name)
+        if own is not None and own.get_secret_value().strip():
+            return own, env_name(name)
+        if self.llm_api_key is not None and self.llm_api_key.get_secret_value().strip():
+            return self.llm_api_key, "LLM_API_KEY"
+        return None
+
+    @property
+    def llm(self) -> LLMSettings:
+        """Valores del proveedor activo: genérica del enunciado → perfil → por defecto."""
+        provider = self.llm_provider
+        origins: dict[str, str] = {}
+
+        def pick(generic: str, own: str | None) -> Any:
+            label = generic.removeprefix("llm_")
+            if getattr(self, generic) is not None:
+                origins[label] = env_name(generic)
+                return getattr(self, generic)
+            if own is None:
+                return None
+            origins[label] = describe_field(own)
+            return getattr(self, own)
+
+        key = self._provider_key()
+        if key is None:  # pragma: no cover - lo impide _check_llm_key
+            raise ConfigError(f"Falta la API key de {provider}")
+        origins["api_key"] = key[1]
+        model: str = pick("llm_model", f"llm_{provider}_model")
+        base_url = pick("llm_base_url", "llm_openai_base_url") if provider == "openai" else None
+        # El SDK de Anthropic ya no acepta temperature (R-05): con anthropic nunca se envía.
+        temperature = (
+            None
+            if provider == "anthropic"
+            else pick("llm_temperature", f"llm_{provider}_temperature")
+        )
+        effort: str | None = {
+            "anthropic": self.llm_anthropic_effort,
+            "openai": self.llm_openai_reasoning_effort,
+            "gemini": None,
+        }[provider]
+        return LLMSettings(
+            provider=provider,
+            model=model,
+            api_key=key[0],
+            base_url=base_url,
+            temperature=temperature,
+            effort=effort,
+            token_param=self.llm_openai_token_param,
+            origins=origins,
+        )
+
     def secret_values(self) -> list[str]:
-        """Valores de los secretos, para que el sistema de logs los redacte."""
-        return [self.telegram_bot_token.get_secret_value(), self.llm_api_key.get_secret_value()]
+        """Valores de los secretos presentes, para que el sistema de logs los redacte."""
+        values = [self.telegram_bot_token.get_secret_value()]
+        for name in SECRET_FIELDS[1:]:
+            secret: SecretStr | None = getattr(self, name)
+            if secret is not None and secret.get_secret_value().strip():
+                values.append(secret.get_secret_value())
+        return values
 
     def startup_warnings(self) -> list[str]:
         """Situaciones válidas pero sospechosas que se registran al arrancar."""
@@ -269,6 +427,17 @@ class Settings(BaseSettings):
                 "ALLOWED_USER_IDS y ADMIN_USER_IDS están vacíos: nadie podrá usar el bot. "
                 "Agrega tu ID de Telegram (el bot te lo muestra al escribirle)."
             )
+        llm = self.llm
+        prefixes = MODEL_PREFIXES.get(llm.provider)
+        if prefixes and not llm.model.lower().startswith(prefixes):
+            warnings.append(
+                f"El modelo {llm.model!r} no parece de {llm.provider} (sale de "
+                f"{llm.origins['model']}). Si cambiaste de proveedor, revisa LLM_MODEL."
+            )
+        if llm.provider == "anthropic" and self.llm_temperature is not None:
+            warnings.append("LLM_TEMPERATURE se ignora con anthropic: su API ya no la acepta.")
+        if llm.provider != "openai" and self.llm_base_url is not None:
+            warnings.append(f"LLM_BASE_URL se ignora con {llm.provider}: solo aplica a openai.")
         if not self.knowledge_base_path.is_dir():
             warnings.append(f"La carpeta de documentos no existe: {self.knowledge_base_path}")
         elif not any(self.knowledge_base_path.iterdir()):
@@ -288,6 +457,11 @@ def _flatten_yaml(data: Mapping[str, Any]) -> dict[str, Any]:
                 )
             raise ConfigError(f"config.yaml: la sección '{section}' debe contener claves anidadas.")
         for key, value in content.items():
+            if str(key).lower() == "api_key":
+                raise ConfigError(
+                    f"config.yaml: {section}.api_key es un secreto: va en .env como "
+                    f"LLM_{str(section).upper()}_API_KEY, nunca en config.yaml."
+                )
             field = by_path.get((str(section), str(key)))
             if field is None:
                 # Una clave mal escrita ignorada en silencio es un error difícil de ver.
@@ -318,7 +492,9 @@ def _format_validation_error(error: ValidationError) -> str:
         elif field:
             lines.append(f"- {describe_field(field)}: {item.get('msg')}.")
         else:
-            lines.append(f"- {item.get('msg')}.")
+            # Errores de validación entre campos: pydantic antepone "Value error, ".
+            message = str(item.get("msg")).removeprefix("Value error, ")
+            lines.append(f"- {message.rstrip('.')}.")
     return "\n".join(lines)
 
 

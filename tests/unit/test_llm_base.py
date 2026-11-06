@@ -38,7 +38,7 @@ def retrying(fake: FakeProvider, *, retries: int = 2, timeout: float = 5.0) -> R
 
 
 async def complete(provider: RetryingProvider) -> str:
-    result = await provider.complete("sys", MESSAGES, temperature=0.1, max_tokens=50)
+    result = await provider.complete("sys", MESSAGES, max_tokens=50)
     return result.text
 
 
@@ -107,7 +107,7 @@ async def test_slow_provider_times_out() -> None:
 async def test_fake_records_the_call() -> None:
     fake = FakeProvider(replies=[lambda system, messages: f"{system}:{messages[-1].content}"])
 
-    result = await fake.complete("S", MESSAGES, temperature=0.0, max_tokens=7)
+    result = await fake.complete("S", MESSAGES, max_tokens=7, temperature=0.0)
 
     assert result.text == "S:hola"
     assert fake.calls[0].max_tokens == 7 and fake.calls[0].messages == tuple(MESSAGES)
@@ -115,43 +115,73 @@ async def test_fake_records_the_call() -> None:
 
 # --- fábrica -------------------------------------------------------------------------------
 
+DOTENV = """TELEGRAM_BOT_TOKEN=123:abc
+LLM_ANTHROPIC_API_KEY=clave-anthropic
+LLM_OPENAI_API_KEY=clave-openai
+LLM_GEMINI_API_KEY=clave-gemini
+"""
+YAML = """
+llm:
+  provider: {provider}
+  timeout_seconds: 12
+  max_retries: 3
+anthropic:
+  model: claude-sonnet-5-5
+  effort: medium
+openai:
+  model: llama-3.3-70b
+  base_url: http://localhost:11434/v1
+  temperature: 0.2
+  reasoning_effort: ""
+gemini:
+  model: gemini-2.5-pro
+  temperature: 0.3
+"""
 
-def write_config(tmp_path: Path, provider: str, model: str) -> Path:
+
+def write_config(tmp_path: Path, provider: str) -> Path:
     (tmp_path / "prompts").mkdir()
     for name in ("system_prompt.md", "rewrite_prompt.md"):
         (tmp_path / "prompts" / name).write_text("prompt", encoding="utf-8")
-    (tmp_path / ".env").write_text(
-        "TELEGRAM_BOT_TOKEN=123:abc\nLLM_API_KEY=clave-de-prueba\nALLOWED_USER_IDS=1\n",
-        encoding="utf-8",
-    )
+    (tmp_path / ".env").write_text(DOTENV, encoding="utf-8")
     config = tmp_path / "config.yaml"
-    config.write_text(
-        f"llm:\n  provider: {provider}\n  model: {model}\n"
-        "  timeout_seconds: 12\n  max_retries: 3\n",
-        encoding="utf-8",
-    )
+    config.write_text(YAML.format(provider=provider), encoding="utf-8")
     return config
 
 
 @pytest.mark.parametrize(
-    ("provider", "model", "adapter"),
+    ("provider", "adapter", "expected"),
     [
-        ("anthropic", "claude-haiku-5-5", "AnthropicProvider"),
-        ("openai", "gpt-5-mini", "OpenAIProvider"),
-        ("gemini", "gemini-3-flash", "GeminiProvider"),
+        (
+            "anthropic",
+            "AnthropicProvider",
+            {"model": "claude-sonnet-5-5", "effort": "medium"},
+        ),
+        (
+            "openai",
+            "OpenAIProvider",
+            {
+                "model": "llama-3.3-70b",
+                "base_url": "http://localhost:11434/v1",
+                "temperature": 0.2,
+                "reasoning_effort": None,
+                "token_param": "max_tokens",
+            },
+        ),
+        ("gemini", "GeminiProvider", {"model": "gemini-2.5-pro", "temperature": 0.3}),
     ],
 )
-def test_factory_builds_the_configured_provider(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, provider: str, model: str, adapter: str
+def test_factory_builds_the_active_profile(
+    tmp_path: Path, provider: str, adapter: str, expected: dict[str, object]
 ) -> None:
-    # CA-R1.4: el proveedor se cambia solo con configuración.
-    for name in ("LLM_PROVIDER", "LLM_MODEL", "LLM_API_KEY", "TELEGRAM_BOT_TOKEN"):
-        monkeypatch.delenv(name, raising=False)
-    settings = load_settings(write_config(tmp_path, provider, model), env_file=".env")
+    # CA-R1.4, CA-R1.6: mismo .env y mismo YAML; solo cambia llm.provider.
+    settings = load_settings(write_config(tmp_path, provider), env_file=".env")
 
     built = create_provider(settings)
 
     assert isinstance(built, RetryingProvider)
-    assert (built.name, built.model) == (provider, model)
+    assert built.name == provider
     assert (built.timeout_seconds, built.max_retries) == (12, 3)
-    assert type(built._inner).__name__ == adapter
+    inner = built._inner
+    assert type(inner).__name__ == adapter
+    assert {name: getattr(inner, name) for name in expected} == expected

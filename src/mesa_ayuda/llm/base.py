@@ -85,8 +85,8 @@ class LLMProvider(Protocol):
         system: str,
         messages: Sequence[ChatMessage],
         *,
-        temperature: float,
         max_tokens: int,
+        temperature: float | None = None,
     ) -> LLMResult:
         """Genera la respuesta del modelo para ``system`` + ``messages``."""
         ...
@@ -128,14 +128,14 @@ class RetryingProvider:
         system: str,
         messages: Sequence[ChatMessage],
         *,
-        temperature: float,
         max_tokens: int,
+        temperature: float | None = None,
     ) -> LLMResult:
         """Llama al adaptador; ver la política en la documentación del módulo."""
         try:
             async with asyncio.timeout(self.timeout_seconds):
                 return await self._with_retries(
-                    system, messages, temperature=temperature, max_tokens=max_tokens
+                    system, messages, max_tokens=max_tokens, temperature=temperature
                 )
         except TimeoutError as error:
             log.warning("llm_timeout", provider=self.name, timeout_seconds=self.timeout_seconds)
@@ -148,14 +148,14 @@ class RetryingProvider:
         system: str,
         messages: Sequence[ChatMessage],
         *,
-        temperature: float,
         max_tokens: int,
+        temperature: float | None = None,
     ) -> LLMResult:
         attempt = 0
         while True:
             try:
                 return await self._inner.complete(
-                    system, messages, temperature=temperature, max_tokens=max_tokens
+                    system, messages, max_tokens=max_tokens, temperature=temperature
                 )
             except TransientLLMError as error:
                 if attempt >= self.max_retries:
@@ -185,34 +185,37 @@ class RetryingProvider:
 
 
 def create_provider(settings: Settings) -> LLMProvider:
-    """Crea el adaptador de ``LLM_PROVIDER`` envuelto con la política de reintentos.
+    """Crea el adaptador del proveedor activo con su perfil y la política de reintentos.
 
-    Raises:
-        LLMBadRequestError: si el proveedor es ``gemini`` y falta el paquete opcional.
+    Todos los valores salen de :attr:`Settings.llm` (CA-R1.6): cambiar de proveedor o de
+    modelo no exige tocar este código.
     """
-    api_key = settings.llm_api_key.get_secret_value()
+    llm = settings.llm
+    api_key = llm.api_key.get_secret_value()
+    timeout = settings.llm_timeout_seconds
     inner: LLMProvider
-    if settings.llm_provider == "anthropic":
+    if llm.provider == "anthropic":
         from mesa_ayuda.llm.anthropic import AnthropicProvider
 
         inner = AnthropicProvider(
-            api_key=api_key, model=settings.llm_model, timeout_seconds=settings.llm_timeout_seconds
+            api_key=api_key, model=llm.model, timeout_seconds=timeout, effort=llm.effort
         )
-    elif settings.llm_provider == "openai":
+    elif llm.provider == "openai":
         from mesa_ayuda.llm.openai import OpenAIProvider
 
         inner = OpenAIProvider(
             api_key=api_key,
-            model=settings.llm_model,
-            base_url=settings.llm_base_url,
-            timeout_seconds=settings.llm_timeout_seconds,
+            model=llm.model,
+            timeout_seconds=timeout,
+            base_url=llm.base_url,
+            temperature=llm.temperature,
+            reasoning_effort=llm.effort,
+            token_param=llm.token_param,
         )
     else:
         from mesa_ayuda.llm.gemini import GeminiProvider
 
         inner = GeminiProvider(
-            api_key=api_key, model=settings.llm_model, timeout_seconds=settings.llm_timeout_seconds
+            api_key=api_key, model=llm.model, timeout_seconds=timeout, temperature=llm.temperature
         )
-    return RetryingProvider(
-        inner, timeout_seconds=settings.llm_timeout_seconds, max_retries=settings.llm_max_retries
-    )
+    return RetryingProvider(inner, timeout_seconds=timeout, max_retries=settings.llm_max_retries)

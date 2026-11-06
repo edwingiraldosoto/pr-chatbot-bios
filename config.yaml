@@ -1,28 +1,71 @@
 # Configuración del asistente (todo lo que NO es secreto).
 #
-# - Los secretos (TELEGRAM_BOT_TOKEN, LLM_API_KEY) van en .env, nunca aquí.
+# - Los secretos (TELEGRAM_BOT_TOKEN y las API keys) van en .env, nunca aquí.
 # - Cualquier valor se puede sobrescribir con una variable de entorno con el nombre que
 #   aparece en el comentario, por ejemplo RETRIEVAL_TOP_K=6.
 # - Las rutas relativas se resuelven respecto a la carpeta de este archivo.
+# - Los cambios se aplican al reiniciar el bot; no hay que tocar ni desplegar código.
 # - Contrato completo y rangos válidos: specs/contracts/config.md
 
+# ----------------------------------------------------------------------------------------
+# Modelo de lenguaje. Para cambiar de proveedor:
+#   1. Cambia "provider" (abajo) o define LLM_PROVIDER.
+#   2. Ten su API key en .env (LLM_ANTHROPIC_API_KEY, LLM_OPENAI_API_KEY o LLM_GEMINI_API_KEY).
+#   3. Verifica:  python -m mesa_ayuda.llm.check
+#   4. Reinicia el bot.
+# Cada proveedor tiene su sección (anthropic, openai, gemini) con su modelo y sus parámetros,
+# así que se puede ir y volver sin reescribir nada. Un parámetro vacío ("") no se envía:
+# sirve para modelos que lo rechazan. Desde una variable de entorno, usa "none".
+# ----------------------------------------------------------------------------------------
 llm:
-  # LLM_PROVIDER: anthropic | openai | gemini.
-  # Con "openai" y base_url se puede usar cualquier API compatible (Groq, Ollama, etc.).
+  # LLM_PROVIDER: anthropic | openai | gemini. Es el único valor que hay que cambiar.
   provider: anthropic
-  # LLM_MODEL: ID del modelo del proveedor elegido.
-  model: claude-haiku-5-5
-  # LLM_BASE_URL: solo para provider=openai con APIs compatibles; vacío = API oficial.
-  base_url: ""
-  # LLM_TEMPERATURE (0-1): baja para respuestas factuales y reproducibles. Anthropic no la
-  # usa (su API retiró el parámetro); aplica a openai y gemini.
-  temperature: 0.1
   # LLM_MAX_TOKENS: máximo de tokens de cada respuesta; acota el costo por consulta.
   max_tokens: 600
-  # LLM_TIMEOUT_SECONDS: tiempo máximo de espera por respuesta del modelo.
+  # LLM_REWRITE_MAX_TOKENS: máximo de tokens al reformular una pregunta de seguimiento.
+  rewrite_max_tokens: 100
+  # LLM_TIMEOUT_SECONDS: tiempo total de espera por respuesta, reintentos incluidos.
   timeout_seconds: 30
   # LLM_MAX_RETRIES: reintentos ante errores transitorios (429, 5xx, red).
   max_retries: 2
+  # Variables genéricas del enunciado. Vacías = se usa la sección del proveedor activo.
+  # Si se definen, reemplazan ese valor del proveedor activo, sea cual sea: al cambiar de
+  # proveedor hay que revisarlas.
+  # LLM_MODEL: reemplaza el modelo del proveedor activo.
+  model: ""
+  # LLM_BASE_URL: reemplaza la URL de openai (no aplica a los demás).
+  base_url: ""
+  # LLM_TEMPERATURE (0-2): reemplaza la temperatura del proveedor activo (anthropic no la usa).
+  temperature: ""
+
+anthropic:
+  # LLM_ANTHROPIC_MODEL: ID del modelo de Claude.
+  model: claude-haiku-5-5
+  # LLM_ANTHROPIC_EFFORT: low | medium | high | xhigh | max. "low" evita que el modelo
+  # gaste tokens razonando en respuestas cortas. Vacío para modelos que no lo aceptan
+  # (Haiku 4.5 y anteriores). Su API ya no acepta temperatura.
+  effort: low
+
+openai:
+  # LLM_OPENAI_MODEL: ID del modelo (o el nombre que use la API compatible).
+  model: gpt-5-mini
+  # LLM_OPENAI_BASE_URL: URL de una API compatible (Groq, Ollama, vLLM...); vacío = OpenAI.
+  base_url: ""
+  # LLM_OPENAI_TEMPERATURE (0-2): vacío para los modelos GPT-5, que solo aceptan la de
+  # fábrica; 0.1 para modelos como gpt-4.1 o los de una API compatible.
+  temperature: ""
+  # LLM_OPENAI_REASONING_EFFORT: minimal | low | medium | high. Vacío para modelos sin
+  # razonamiento (gpt-4.1, la mayoría de las APIs compatibles).
+  reasoning_effort: low
+  # LLM_OPENAI_TOKEN_PARAM: auto | max_tokens | max_completion_tokens. "auto" usa
+  # max_completion_tokens con OpenAI y max_tokens con una URL propia.
+  token_param: auto
+
+gemini:
+  # LLM_GEMINI_MODEL: ID del modelo de Gemini.
+  model: gemini-2.5-flash
+  # LLM_GEMINI_TEMPERATURE (0-2): baja para respuestas factuales; vacío = la de fábrica.
+  temperature: 0.1
 
 embeddings:
   # EMBEDDING_PROVIDER: "local" (modelo descargado una vez, sin API key ni costo).

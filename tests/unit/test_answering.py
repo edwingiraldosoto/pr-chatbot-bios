@@ -77,7 +77,6 @@ def service(fake: FakeProvider, hits: list[SearchHit], *, threshold: float = 0.8
         provider=fake,
         rewriter=QuestionRewriter(fake, "REESCRIBE"),
         system_prompt="SISTEMA",
-        temperature=0.1,
         max_tokens=600,
     )
 
@@ -110,7 +109,7 @@ async def test_only_relevant_fragments_reach_the_prompt() -> None:
     [call] = fake.calls
     content = call.messages[-1].content
     assert "politica_vacaciones.md" in content and "trabajo_remoto.txt" not in content
-    assert (call.system, call.temperature, call.max_tokens) == ("SISTEMA", 0.1, 600)
+    assert (call.system, call.temperature, call.max_tokens) == ("SISTEMA", None, 600)
 
 
 async def test_below_threshold_does_not_call_the_llm() -> None:

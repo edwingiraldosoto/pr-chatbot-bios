@@ -22,20 +22,18 @@ dependencies = [
     "structlog>=26.1,<27",
     "anthropic>=2.6,<3",
     "openai>=3.46,<4",
+    "google-genai>=3.0,<4",
     # En Windows zoneinfo no trae base de zonas horarias; tzdata la provee.
     "tzdata>=2024.1",
 ]
 
 [project.optional-dependencies]
-gemini = ["google-genai>=3.0,<4"]
 dev = [
     "pytest>=9.2,<10",
     "pytest-asyncio>=1.0",
     "ruff>=0.17,<0.18",
     "mypy>=2.4,<3",
     "types-PyYAML",
-    # Para que la suite pruebe también el adaptador opcional de Gemini.
-    "google-genai>=3.0,<4",
 ]
 
 [tool.setuptools.packages.find]

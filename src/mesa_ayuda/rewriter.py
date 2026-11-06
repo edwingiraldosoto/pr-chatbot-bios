@@ -17,9 +17,9 @@ from mesa_ayuda.prompting import build_rewrite_prompt, normalize_history
 
 log = get_logger(__name__)
 
-# Parámetros fijos de la llamada (specs/contracts/prompt.md): determinista y corta.
+# Temperatura pedida para reformular: determinista. Si el modelo activo no acepta
+# temperatura (perfil sin temperatura), el adaptador no la envía.
 REWRITE_TEMPERATURE = 0.0
-REWRITE_MAX_TOKENS = 100
 _QUOTES = "\"'“”«»"
 
 
@@ -43,11 +43,13 @@ class QuestionRewriter:
     Args:
         provider: Proveedor de LLM (con su política de reintentos).
         prompt: Contenido de ``REWRITE_PROMPT_PATH``.
+        max_tokens: ``LLM_REWRITE_MAX_TOKENS``.
     """
 
-    def __init__(self, provider: LLMProvider, prompt: str) -> None:
+    def __init__(self, provider: LLMProvider, prompt: str, *, max_tokens: int = 100) -> None:
         self._provider = provider
         self._prompt = prompt
+        self._max_tokens = max_tokens
 
     async def rewrite(self, question: str, history: Sequence[ChatMessage]) -> Rewrite:
         """Devuelve la pregunta autónoma, o la original si no hay historial o algo falla."""
@@ -59,8 +61,8 @@ class QuestionRewriter:
             result = await self._provider.complete(
                 prompt.system,
                 prompt.messages,
+                max_tokens=self._max_tokens,
                 temperature=REWRITE_TEMPERATURE,
-                max_tokens=REWRITE_MAX_TOKENS,
             )
         except LLMError as error:
             log.warning("rewrite_failed", error_type=type(error).__name__)
