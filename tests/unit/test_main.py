@@ -98,7 +98,7 @@ def test_starts_after_the_initial_index_and_polls_only_messages(
 ) -> None:
     assert entry.main(["config.yaml"]) == 0
 
-    assert fakes["polling"] == {"allowed_updates": ["message"]}
+    assert fakes["polling"] == {"allowed_updates": ["message", "callback_query"]}
     out = capsys.readouterr().out
     names = [event["event"] for event in events(out)]
     assert names.index("reindex_finished") < names.index("bot_starting")

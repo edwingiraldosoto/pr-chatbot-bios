@@ -20,7 +20,7 @@ from telegram.error import NetworkError
 
 from mesa_ayuda.answering import Answer, Outcome, Source
 from mesa_ayuda.bot import messages
-from mesa_ayuda.bot.handlers import Answerer, BotHandlers
+from mesa_ayuda.bot.handlers import Answerer, BotHandlers, document_id
 from mesa_ayuda.bot.small_talk import SmallTalk
 from mesa_ayuda.embeddings import EmbeddingModelError
 from mesa_ayuda.guards import AccessControl, DuplicateFilter, RateLimiter, invite_fingerprint
@@ -93,6 +93,7 @@ def make_handlers(
     log_questions: bool = False,
     typing_interval: float = 4.0,
     invite_code: str | None = None,
+    knowledge_base: Path | None = None,
     **limits: int,
 ) -> BotHandlers:
     return BotHandlers(
@@ -104,6 +105,8 @@ def make_handlers(
         log_questions=log_questions,
         typing_interval=typing_interval,
         invite_code=invite_code,
+        knowledge_base=knowledge_base,
+        source_download=knowledge_base is not None,
         **limits,  # type: ignore[arg-type]
     )
 
@@ -839,3 +842,110 @@ async def test_polling_network_errors_are_one_line_warnings(
     assert "exc_info" not in network
     assert (other["event"], other["log_level"]) == ("background_error", "error")
     assert not any(e["event"] == "message_handled" for e in logs)
+
+
+# --- Descarga del documento fuente (T-37; RF-14) --------------------------------------------
+
+
+@pytest.fixture
+def kb(tmp_path: Path) -> Path:
+    root = tmp_path / "knowledge_base"
+    (root / "rrhh").mkdir(parents=True)
+    (root / "rrhh" / "vacaciones.md").write_text("# Vacaciones", encoding="utf-8")
+    (root / "guia.pdf").write_bytes(b"%PDF-1.4 falso")
+    (root / "escaneado.pdf").write_bytes(b"%PDF-1.4 ilegible")  # existe, pero no indexado
+    (tmp_path / "secreto.txt").write_text("fuera de la carpeta", encoding="utf-8")
+    return root
+
+
+def kb_index() -> FakeIndex:
+    return FakeIndex(
+        [
+            SourceInfo("rrhh/vacaciones.md", "indexed", 2, "", ()),
+            SourceInfo("guia.pdf", "indexed", 3, "", ()),
+            SourceInfo("escaneado.pdf", "unreadable", 0, "", ()),
+            SourceInfo("../secreto.txt", "indexed", 1, "", ()),  # manifest manipulado
+        ]
+    )
+
+
+async def test_answer_offers_one_button_per_cited_document(storage: Storage, kb: Path) -> None:
+    # CA-14.1: dos secciones del mismo documento dan un solo botón.
+    answer = answered(
+        "15 días [1][2][3].",
+        Source("rrhh/vacaciones.md", "Días"),
+        Source("rrhh/vacaciones.md", "Acumulación"),
+        Source("guia.pdf", page=3),
+    )
+    handlers = make_handlers(
+        storage, kb_index(), answers=ScriptedAnswers([answer]), knowledge_base=kb
+    )
+    async with TelegramHarness(handlers) as bot:
+        await bot.send(USER, "¿Cuántos días?")
+        (buttons,) = bot.buttons(USER)
+
+    assert buttons == [
+        ("Descargar vacaciones.md", "doc:" + document_id("rrhh/vacaciones.md")),
+        ("Descargar guia.pdf", "doc:" + document_id("guia.pdf")),
+    ]
+    assert "rrhh" not in "".join(data for _, data in buttons)  # el dato no es una ruta
+
+
+async def test_button_sends_the_indexed_file(storage: Storage, kb: Path) -> None:
+    handlers = make_handlers(storage, kb_index(), knowledge_base=kb)
+    async with TelegramHarness(handlers) as bot:
+        replies = await bot.press(USER, "doc:" + document_id("rrhh/vacaciones.md"))
+        sent = bot.documents(USER)
+
+    assert replies == []
+    assert sent == ["vacaciones.md"]
+
+
+@pytest.mark.parametrize(
+    "data",
+    [
+        "doc:" + document_id("escaneado.pdf"),  # no indexado
+        "doc:" + document_id("../secreto.txt"),  # fuera de la carpeta
+        "doc:0123456789abcdef",  # inventado
+        "doc:../secreto.txt",  # una ruta en lugar del id
+    ],
+)
+async def test_only_indexed_files_inside_the_folder_can_be_downloaded(
+    storage: Storage, kb: Path, data: str
+) -> None:
+    # CA-14.2
+    handlers = make_handlers(storage, kb_index(), knowledge_base=kb)
+    async with TelegramHarness(handlers) as bot:
+        replies = await bot.press(USER, data)
+        sent = bot.documents(USER)
+
+    assert replies == [messages.DOWNLOAD_GONE]
+    assert sent == []
+
+
+async def test_buttons_are_off_by_default(storage: Storage, index: FakeIndex) -> None:
+    async with TelegramHarness(make_handlers(storage, index)) as bot:
+        await bot.send(USER, "¿Cuántos días?")
+        assert bot.buttons(USER) == [[]]
+        await bot.press(USER, "doc:" + document_id("politica_vacaciones.md"))
+        assert bot.documents(USER) == []
+
+
+async def test_strangers_cannot_press_buttons(storage: Storage, kb: Path) -> None:
+    handlers = make_handlers(storage, kb_index(), knowledge_base=kb)
+    async with TelegramHarness(handlers) as bot:
+        replies = await bot.press(STRANGER, "doc:" + document_id("guia.pdf"))
+        group = await bot.press(USER, "doc:" + document_id("guia.pdf"), chat_type="group")
+
+    assert replies == [messages.access_denied(STRANGER)]
+    assert group == []
+    assert bot.documents(STRANGER) == [] and bot.documents(-100) == []
+
+
+async def test_rejected_file_is_explained(storage: Storage, kb: Path) -> None:
+    handlers = make_handlers(storage, kb_index(), knowledge_base=kb)
+    async with TelegramHarness(handlers) as bot:
+        bot.request.reject_documents = True
+        replies = await bot.press(USER, "doc:" + document_id("guia.pdf"))
+
+    assert replies == [messages.DOWNLOAD_FAILED]

@@ -38,7 +38,8 @@ from mesa_ayuda.storage import Storage
 
 log = get_logger("mesa_ayuda")
 
-ALLOWED_UPDATES = ["message"]  # ediciones, reacciones y demás no se descargan
+# Mensajes y botones (RF-14); ediciones, reacciones y demás no se descargan.
+ALLOWED_UPDATES = ["message", "callback_query"]
 
 
 @dataclass
@@ -111,6 +112,8 @@ def build(
         daily_questions_total=settings.daily_questions_total,
         max_question_chars=settings.max_question_chars,
         notify_admins=settings.reindex_notify_admins,
+        knowledge_base=settings.knowledge_base_path,
+        source_download=settings.source_download,
     )
     application: AnyApplication = (
         Application.builder()

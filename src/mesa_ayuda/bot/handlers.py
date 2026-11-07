@@ -16,19 +16,22 @@ pruebas los ejercitan con un Telegram falso y sin red.
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import time
 from collections.abc import AsyncIterator, Sequence
 from contextlib import asynccontextmanager, suppress
 from datetime import UTC, datetime, tzinfo
 from datetime import time as day_time
+from pathlib import Path
 from typing import Any, Protocol, cast
 
-from telegram import Bot, Message, Update
+from telegram import Bot, InlineKeyboardButton, InlineKeyboardMarkup, Message, Update
 from telegram.constants import ChatAction
 from telegram.error import NetworkError, TelegramError
 from telegram.ext import (
     Application,
     ApplicationHandlerStop,
+    CallbackQueryHandler,
     CommandHandler,
     ContextTypes,
     MessageHandler,
@@ -96,10 +99,19 @@ class DocumentIndex(Protocol):
         ...
 
 
-async def reply(message: Message, text: str) -> None:
-    """Envía un texto en tantas partes como haga falta (CA-R5.6)."""
-    for part in split_message(text):
-        await message.reply_text(part)
+async def reply(message: Message, text: str, markup: InlineKeyboardMarkup | None = None) -> None:
+    """Envía un texto en tantas partes como haga falta (CA-R5.6); botones en la última."""
+    parts = split_message(text)
+    for number, part in enumerate(parts, start=1):
+        await message.reply_text(part, reply_markup=markup if number == len(parts) else None)
+
+
+DOWNLOAD_PREFIX = "doc:"
+
+
+def document_id(source: str) -> str:
+    """Identificador del botón de descarga: huella de la ruta, no la ruta (CA-14.2)."""
+    return hashlib.sha256(source.encode("utf-8")).hexdigest()[:16]
 
 
 def _message(update: Update) -> Message:
@@ -133,6 +145,9 @@ class BotHandlers:
         duplicates: Filtro de copias repetidas; sin él no se filtran (CA-R5.7).
         invite_code: ``INVITE_CODE``; sin él no hay invitaciones (CA-07.5).
         timezone: Zona horaria del día de los topes y de ``/invitados``.
+        knowledge_base: ``KNOWLEDGE_BASE_PATH``, de donde salen los archivos que se
+            descargan con el botón de fuente.
+        source_download: ``bot.source_download``: botón "Descargar" por fuente (RF-14).
         notify_admins: ``REINDEX_NOTIFY_ADMINS``: avisar a los administradores el
             resultado de la reindexación programada si hubo cambios o errores.
         daily_questions_per_user: Tope diario por usuario (CA-R8.1); ``None`` = sin tope.
@@ -158,6 +173,8 @@ class BotHandlers:
         daily_questions_total: int | None = None,
         max_question_chars: int | None = None,
         notify_admins: bool = True,
+        knowledge_base: Path | None = None,
+        source_download: bool = False,
     ) -> None:
         self.access = access
         self.limiter = limiter
@@ -174,6 +191,8 @@ class BotHandlers:
         self.daily_questions_total = daily_questions_total
         self.max_question_chars = max_question_chars
         self.notify_admins = notify_admins
+        self.knowledge_base = knowledge_base
+        self.source_download = source_download and knowledge_base is not None
         self._user_locks: dict[int, asyncio.Lock] = {}
 
     def register(self, application: AnyApplication) -> None:
@@ -191,6 +210,7 @@ class BotHandlers:
         application.add_handler(MessageHandler(new_message & filters.COMMAND, self.unknown))
         application.add_handler(MessageHandler(new_message & filters.TEXT, self.question))
         application.add_handler(MessageHandler(new_message, self.not_text))
+        application.add_handler(CallbackQueryHandler(self.download, pattern=f"^{DOWNLOAD_PREFIX}"))
         application.add_error_handler(self.on_error)
 
     def today(self) -> str:
@@ -212,12 +232,17 @@ class BotHandlers:
     async def gate(self, update: Update, context: Context) -> None:
         """Chat privado → acceso → copias → límite (CA-07.2, CA-07.4, CA-R5.7, CA-R5.4)."""
         message, user, chat = update.message, update.effective_user, update.effective_chat
-        if message is None or user is None or chat is None:
+        query = update.callback_query  # botón de descarga (RF-14)
+        if (message is None and query is None) or user is None or chat is None:
             raise ApplicationHandlerStop  # ediciones, estados del chat y demás: se ignoran
         if not is_private_chat(chat.type):
             log.info("message_ignored", reason="chat_not_private", chat_type=chat.type)
             raise ApplicationHandlerStop
         bind_request(request_id=new_request_id(), user_id=user.id)
+        if message is None:
+            assert query is not None
+            await self._gate_button(query, user.id)
+            return
         if not self.is_authorized(user.id):
             payload = invite_payload(message.text)
             if (
@@ -243,6 +268,18 @@ class BotHandlers:
             log.warning("message_handled", outcome="rate_limited", warned=decision.value)
             if decision is RateDecision.WARN:
                 await reply(message, messages.RATE_LIMITED)
+            raise ApplicationHandlerStop
+
+    async def _gate_button(self, query: Any, user_id: int) -> None:
+        """Acceso y límite por minuto para los botones (sin copias: no traen texto)."""
+        if not self.is_authorized(user_id):
+            log.warning("message_handled", outcome="denied", button=True)
+            await query.answer(messages.access_denied(user_id), show_alert=True)
+            raise ApplicationHandlerStop
+        decision = self.limiter.check(user_id)
+        if decision is not RateDecision.ALLOW:
+            log.warning("message_handled", outcome="rate_limited", button=True)
+            await query.answer(messages.RATE_LIMITED if decision is RateDecision.WARN else None)
             raise ApplicationHandlerStop
 
     # --- Comandos (RF-06) -------------------------------------------------------------------
@@ -440,7 +477,8 @@ class BotHandlers:
         async with self._lock(user_id):
             async with self._typing(context.bot, message.chat_id):
                 outcome, answer_text, answer = await self._answer(user_id, text)
-            await reply(message, answer_text)
+            markup = self._download_buttons(answer) if outcome == "answered" else None
+            await reply(message, answer_text, markup)
         log.info(
             "message_handled",
             outcome=outcome,
@@ -532,6 +570,64 @@ class BotHandlers:
             task.cancel()
             with suppress(asyncio.CancelledError):
                 await task
+
+    # --- Descarga del documento fuente (RF-14) ----------------------------------------------
+
+    def _download_buttons(self, answer: Answer | None) -> InlineKeyboardMarkup | None:
+        """Un botón por documento citado, sin repetir (CA-14.1)."""
+        if not self.source_download or answer is None:
+            return None
+        documents = list(dict.fromkeys(source.source for source in answer.sources))
+        if not documents:
+            return None
+        return InlineKeyboardMarkup(
+            [
+                [
+                    InlineKeyboardButton(
+                        f"Descargar {Path(source).name}",
+                        callback_data=DOWNLOAD_PREFIX + document_id(source),
+                    )
+                ]
+                for source in documents
+            ]
+        )
+
+    def _resolve_download(self, doc_id: str) -> Path | None:
+        """Archivo del id, solo si está indexado ahora y dentro de la carpeta (CA-14.2)."""
+        if self.knowledge_base is None:
+            return None
+        root = self.knowledge_base.resolve()
+        for info in self.indexer.sources():
+            if info.status != "indexed" or document_id(info.source) != doc_id:
+                continue
+            path = (root / info.source).resolve()
+            if path.is_relative_to(root) and path.is_file():
+                return path
+            log.warning("download_outside_knowledge_base", source=info.source)
+        return None
+
+    async def download(self, update: Update, context: Context) -> None:
+        """Botón "Descargar <documento>": envía el archivo citado."""
+        query = update.callback_query
+        if query is None or query.data is None:  # pragma: no cover - el patrón lo garantiza
+            return
+        await query.answer()
+        chat = update.effective_chat
+        if not self.source_download or chat is None:
+            return
+        path = self._resolve_download(query.data.removeprefix(DOWNLOAD_PREFIX))
+        if path is None:
+            await context.bot.send_message(chat.id, messages.DOWNLOAD_GONE)
+            log.info("message_handled", outcome="download", found=False)
+            return
+        try:
+            with path.open("rb") as handle:
+                await context.bot.send_document(chat.id, handle, filename=path.name)
+        except TelegramError as error:  # p. ej. más de 50 MB
+            log.warning("download_failed", error=str(error))
+            await context.bot.send_message(chat.id, messages.DOWNLOAD_FAILED)
+            return
+        log.info("message_handled", outcome="download", found=True)
 
     async def not_text(self, update: Update, context: Context) -> None:
         """Foto, audio, archivo, sticker o texto vacío (CA-R5.3)."""

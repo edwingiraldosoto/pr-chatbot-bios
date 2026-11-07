@@ -27,6 +27,7 @@ class FakeRequest(BaseRequest):
     def __init__(self, calls: list[tuple[str, dict[str, Any]]]) -> None:
         self.calls = calls
         self._message_ids = itertools.count(1000)
+        self.reject_documents = False
 
     async def initialize(self) -> None:
         return None
@@ -50,6 +51,9 @@ class FakeRequest(BaseRequest):
     ) -> tuple[int, bytes]:
         name = url.rsplit("/", 1)[-1]
         params = dict(request_data.parameters) if request_data else {}
+        if request_data is not None and request_data.contains_files:
+            files = request_data.multipart_data or {}
+            params["_files"] = [value[0] for value in files.values()]  # nombres
         self.calls.append((name, params))
         result: Any = True
         if name == "getMe":
@@ -62,6 +66,18 @@ class FakeRequest(BaseRequest):
                 "from": BOT_USER,
                 "text": params["text"],
             }
+        elif name == "sendDocument":
+            if self.reject_documents:
+                return 400, json.dumps(
+                    {"ok": False, "error_code": 400, "description": "Bad Request: file too big"}
+                ).encode()
+            result = {
+                "message_id": next(self._message_ids),
+                "date": 0,
+                "chat": {"id": int(params["chat_id"]), "type": "private"},
+                "from": BOT_USER,
+                "document": {"file_id": "f", "file_unique_id": "u"},
+            }
         return 200, json.dumps({"ok": True, "result": result}).encode()
 
 
@@ -70,10 +86,11 @@ class TelegramHarness:
 
     def __init__(self, handlers: BotHandlers) -> None:
         self.calls: list[tuple[str, dict[str, Any]]] = []
+        self.request = FakeRequest(self.calls)
         self.app: AnyApplication = (
             Application.builder()
             .token("123456:TEST")
-            .request(FakeRequest(self.calls))
+            .request(self.request)
             .get_updates_request(FakeRequest(self.calls))
             .concurrent_updates(True)
             .build()
@@ -95,6 +112,53 @@ class TelegramHarness:
             for name, params in self.calls
             if name == "sendMessage" and (chat_id is None or int(params["chat_id"]) == chat_id)
         ]
+
+    def buttons(self, chat_id: int) -> list[list[tuple[str, str]]]:
+        """Botones de cada mensaje enviado al chat: ``[(texto, dato), ...]`` por mensaje."""
+        result = []
+        for name, params in self.calls:
+            if name != "sendMessage" or int(params["chat_id"]) != chat_id:
+                continue
+            markup = params.get("reply_markup")
+            if isinstance(markup, str):
+                markup = json.loads(markup)
+            rows = markup["inline_keyboard"] if markup else []
+            result.append([(b["text"], b["callback_data"]) for row in rows for b in row])
+        return result
+
+    def documents(self, chat_id: int) -> list[str]:
+        """Nombres de los archivos enviados al chat."""
+        names = []
+        for name, params in self.calls:
+            if name == "sendDocument" and int(params["chat_id"]) == chat_id:
+                names.extend(params.get("_files", []))
+        return names
+
+    async def press(self, user_id: int, data: str, *, chat_type: str = "private") -> list[str]:
+        """Toca un botón; devuelve los textos de los avisos (answerCallbackQuery) y mensajes."""
+        chat_id = user_id if chat_type == "private" else -100
+        before = len(self.calls)
+        query = {
+            "id": str(next(self._ids)),
+            "from": {"id": user_id, "is_bot": False, "first_name": "Usuario"},
+            "chat_instance": "c",
+            "data": data,
+            "message": {
+                "message_id": next(self._ids),
+                "date": 0,
+                "chat": {"id": chat_id, "type": chat_type},
+                "text": "respuesta",
+            },
+        }
+        update = Update.de_json(
+            {"update_id": next(self._ids), "callback_query": query}, self.app.bot
+        )
+        await self.app.process_update(update)
+        out = []
+        for name, params in self.calls[before:]:
+            if (name == "answerCallbackQuery" and params.get("text")) or name == "sendMessage":
+                out.append(params["text"])
+        return out
 
     def actions(self) -> list[str]:
         """Acciones de chat enviadas (``typing``)."""

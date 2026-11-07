@@ -89,6 +89,8 @@ REINDEX_IN_PROGRESS = "Ya hay una reindexación en curso."
 REINDEX_USAGE = "Uso: /reindex (cambios) o /reindex full (reconstrucción completa)."
 REINDEX_FAILED = "La reindexación falló: {reason}. Revisa el log del bot."
 SCHEDULED_REINDEX = "Reindexación programada de las {time}."
+DOWNLOAD_GONE = "Ese documento ya no está disponible."
+DOWNLOAD_FAILED = "No pude enviar el documento; pídeselo a la mesa de ayuda."
 
 INVITE_DISABLED = (
     "Las invitaciones están desactivadas. Define INVITE_CODE en .env y reinicia el bot."
