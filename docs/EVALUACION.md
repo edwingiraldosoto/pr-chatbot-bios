@@ -1,23 +1,24 @@
 # Evaluación del asistente
 
-> T-38, T-39 y T-54. Conjunto de 30 casos, script reproducible y calibración. Todas las
+> T-38, T-39, T-54 y T-55. Conjunto de 30 casos, script reproducible y calibración. Todas las
 > cifras salen de ejecuciones reales del 2026-11-07 con `claude-haiku-5-5` y el modelo de
 > embeddings local `intfloat/multilingual-e5-small`.
 
 ## Resultado
 
-Ejecución con la configuración de la entrega (después de T-54: `anthropic.thinking:
-disabled`). La columna "Antes de T-54" es la ejecución que se detalla caso por caso más
-abajo.
+La columna "Entrega" es la ejecución con la configuración y los documentos que se
+entregan: `anthropic.thinking: disabled` (T-54), reintento de respuestas cortadas (T-55) y
+documentos de la empresa ficticia Nubeverde. "Antes de T-54" es la ejecución que se
+detalla caso por caso más abajo, hecha con los documentos renombrados a GrupoBios.
 
-| Criterio | Meta | Configuración final | Antes de T-54 |
-|---|---|---|---|
-| SC-001 Preguntas dentro de alcance, correctas y con su fuente | ≥ 80 % | 15/15 (100 %) | 15/15 |
-| SC-002 Preguntas fuera de alcance que terminan en "no encontrado" | 100 % (mín. 3) | 5/5 (100 %) | 5/5 |
-| SC-003 Seguimientos respondidos con el contexto | 100 % (mín. 2) | 4/4 (100 %) | 3/4 (ver "Variación") |
-| CA-R4.3 Casos de prompt injection sin obedecer | mín. 2 (documento y mensaje) | 3/3 | 3/3 |
-| Reformulación sin inventar contenido | — | 3/3 | 3/3 |
-| SC-005 Tiempo de respuesta | < 10 s | mediana 1,5 s, máximo 3,4 s | mediana 1,3 s, máximo 2,5 s |
+| Criterio | Meta | Entrega | Después de T-54 (GrupoBios) | Antes de T-54 (GrupoBios) |
+|---|---|---|---|---|
+| SC-001 Preguntas dentro de alcance, correctas y con su fuente | ≥ 80 % | 15/15 (100 %) | 15/15 | 15/15 |
+| SC-002 Preguntas fuera de alcance que terminan en "no encontrado" | 100 % (mín. 3) | 5/5 (100 %) | 5/5 | 5/5 |
+| SC-003 Seguimientos respondidos con el contexto | 100 % (mín. 2) | 4/4 (100 %) | 4/4 | 3/4 (ver "Variación") |
+| CA-R4.3 Casos de prompt injection sin obedecer | mín. 2 (documento y mensaje) | 3/3 | 3/3 | 3/3 |
+| Reformulación sin inventar contenido | — | 3/3 | 3/3 | 3/3 |
+| SC-005 Tiempo de respuesta | < 10 s | mediana 1,2 s, máximo 2,4 s | mediana 1,5 s, máximo 3,4 s | mediana 1,3 s, máximo 2,5 s |
 
 La fuente esperada aparece entre los 5 fragmentos recuperados en los 20 casos que deben
 responderse (en el puesto 1 en 19 y en el puesto 2 en uno).
@@ -59,7 +60,8 @@ automática solo busca textos.
 
 Ejecución anterior a T-54 (umbral 0,80, top-K 5, fragmento 800 con solapamiento 150), sobre
 los documentos de ejemplo después de cambiar el nombre de la empresa a GrupoBios. Lo que
-cambió con la configuración final está en [Repetición después de T-54](#repetición-después-de-t-54).
+cambió después está en [Repetición después de T-54](#repetición-después-de-t-54) y en
+[Ejecución de la entrega](#ejecución-de-la-entrega-t-55-y-documentos-nubeverde).
 
 | Caso | Tipo | Resultado | Fuente citada | Mejor puntaje | Rango |
 |---|---|---|---|---|---|
@@ -111,7 +113,7 @@ que escribe `--salida`.
 | `reem_minibar` | ¿Me reembolsan lo que consuma del minibar del hotel? | No, el minibar no es reembolsable. | No. El minibar no es reembolsable. La política lo incluye en la lista de gastos no reembolsables. | Sí |
 | `reem_anticipo` | ¿Puedo pedir un anticipo para un viaje de 3 días? | Sí (viaje de más de 2 días): hasta el 70 % del presupuesto estimado. | Sí, puedes pedir un anticipo para un viaje de más de 2 días. Un viaje de 3 días cumple esa condición. El anticipo puede ser de hasta el 70 % del presupuesto estimado. Para legalizarlo, usas el mismo formulario de reembo… | Sí |
 | `ti_horario` | ¿En qué horario atiende la mesa de servicio de TI? | Lunes a viernes de 7:00 a. m. a 7:00 p. m. y sábados de 8:00 a. m. a 12:00 m. | La mesa de servicio de TI atiende de lunes a viernes de 7:00 a. m. a 7:00 p. m. y los sábados de 8:00 a. m. a 12:00 m. Fuera de ese horario, solo los incidentes de prioridad P1 se atienden por la línea de guardia 601 55… | Sí |
-| `ti_contrasena` | ¿Cómo restablezco mi contraseña? | Pasos en clave.grupobios.example con el código de 6 dígitos al celular. | Para restablecer tu contraseña, sigue estos pasos: Paso 1: Abre https://clave.grupobios.example desde cualquier navegador. Paso 2: Escribe tu usuario corporativo y elige la opción Olvidé mi contraseña. Paso 3: Ingresa e… | Sí |
+| `ti_contrasena` | ¿Cómo restablezco mi contraseña? | Pasos en clave.grupobios.example (hoy clave.nubeverde.example) con el código de 6 dígitos al celular. | Para restablecer tu contraseña, sigue estos pasos: Paso 1: Abre https://clave.grupobios.example desde cualquier navegador. Paso 2: Escribe tu usuario corporativo y elige la opción Olvidé mi contraseña. Paso 3: Ingresa e… | Sí |
 | `ti_p1` | ¿En cuánto tiempo responden un caso de prioridad crítica? | Primera respuesta en 15 minutos (solución objetivo en 4 horas). | Un caso de prioridad crítica (P1) tiene una primera respuesta en 15 minutos y una solución objetivo en 4 horas. Los incidentes P1 fuera de horario también se atienden por la línea de guardia 601 555 0199. | Sí |
 | `rem_dias` | ¿Cuántos días puedo trabajar desde casa a la semana? | Hasta 2 días por semana; los lunes son presenciales. | Puedes trabajar desde casa hasta 2 días por semana, si tu cargo es elegible y tu jefe inmediato lo aprueba. Los lunes son presenciales para todos los equipos. | Sí |
 | `rem_auxilio` | ¿Cuánto es el auxilio de conectividad? | $85.000 mensuales para quien trabaje en remoto al menos 4 días al mes. | El auxilio de conectividad es de $85.000 mensuales. Se paga en la nómina de fin de mes a quien trabaje en remoto al menos 4 días al mes. No se paga en los meses de vacaciones completas o licencia. | Sí |
@@ -163,6 +165,25 @@ cambio toca la llamada de cada respuesta, se repitió la evaluación completa co
 - Latencia de las 22 respuestas con contenido: mediana 1,5 s y máximo 3,4 s, por debajo de
   los 10 s de SC-005. La diferencia con la ejecución anterior (1,3 s y 2,5 s) está dentro de
   la variación de la red y la API; no la atribuyo al cambio.
+
+## Ejecución de la entrega (T-55 y documentos Nubeverde)
+
+Dos cambios después de la repetición anterior: a pedido del autor, los documentos de
+ejemplo volvieron a la empresa ficticia Nubeverde S.A.S. (el enunciado pide una empresa
+imaginaria), y una respuesta cortada por `LLM_MAX_TOKENS` ahora se pide de nuevo una vez
+con 1.200 tokens antes de recortarla (T-55, CA-R5.8). Se repitió la evaluación completa.
+
+- Los 30 casos pasan y el script termina con código 0. La fuente esperada quedó en el
+  puesto 1 en 19 casos y en el 2 en uno (`reem_anticipo`), como en las ejecuciones
+  anteriores.
+- El reintento no se activó en ningún caso: el que más tokens de salida usó llegó a 284
+  de 600. Es una defensa para preguntas largas o de varios temas, no algo que cambie estas
+  cifras.
+- Ninguna respuesta menciona GrupoBios. `ti_contrasena` remite a
+  `clave.nubeverde.example`, que es lo que dicen los documentos.
+- Consumo: 64.104 tokens de entrada y 2.450 de salida, USD 0,0064 + USD 0,0012 =
+  **USD 0,0076** por los 30 casos.
+- Latencia de las 22 respuestas con contenido: mediana 1,2 s y máximo 2,4 s.
 
 ## Prompt injection (RNF-04, CA-R4.3)
 
