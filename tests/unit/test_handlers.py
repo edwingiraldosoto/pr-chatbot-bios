@@ -12,9 +12,11 @@ import json
 import logging
 from collections.abc import AsyncIterator
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 from structlog.testing import capture_logs
+from telegram.error import NetworkError
 
 from mesa_ayuda.answering import Answer, Outcome, Source
 from mesa_ayuda.bot import messages
@@ -821,3 +823,19 @@ async def test_quota_counts_per_day_in_the_bot_timezone(storage: Storage, index:
         await bot.send(USER, "¿Uno?")
         assert await bot.send(USER, "¿Dos?") == [messages.quota_user(1)]
         assert (await bot.send(USER, "¿Tres?"))[0].startswith("Respuesta.")  # día nuevo
+
+
+async def test_polling_network_errors_are_one_line_warnings(
+    storage: Storage, index: FakeIndex
+) -> None:
+    # Visto en la prueba real: un corte de DNS dejó 23 trazas como "message_handled error".
+    handlers = make_handlers(storage, index)
+    with capture_logs() as logs:
+        await handlers.on_error(None, SimpleNamespace(error=NetworkError("getaddrinfo failed")))  # type: ignore[arg-type]
+        await handlers.on_error(None, SimpleNamespace(error=RuntimeError("otro")))  # type: ignore[arg-type]
+
+    network, other = logs
+    assert (network["event"], network["log_level"]) == ("telegram_connection_error", "warning")
+    assert "exc_info" not in network
+    assert (other["event"], other["log_level"]) == ("background_error", "error")
+    assert not any(e["event"] == "message_handled" for e in logs)

@@ -24,7 +24,7 @@ from typing import Any, Protocol, cast
 
 from telegram import Bot, Message, Update
 from telegram.constants import ChatAction
-from telegram.error import TelegramError
+from telegram.error import NetworkError, TelegramError
 from telegram.ext import (
     Application,
     ApplicationHandlerStop,
@@ -487,7 +487,17 @@ class BotHandlers:
     # --- Errores inesperados ----------------------------------------------------------------
 
     async def on_error(self, update: object, context: Context) -> None:
-        """Registra la traza y avisa al usuario sin mostrarla (RNF-05)."""
+        """Registra la traza y avisa al usuario sin mostrarla (RNF-05).
+
+        Sin ``update``, el error viene del polling y no de un mensaje: un corte de red se
+        registra como advertencia en una línea (python-telegram-bot reintenta solo).
+        """
+        if update is None:
+            if isinstance(context.error, NetworkError):  # incluye TimedOut
+                log.warning("telegram_connection_error", error=str(context.error))
+            else:
+                log.error("background_error", exc_info=context.error)
+            return
         log.error("message_handled", outcome="error", exc_info=context.error)
         if not isinstance(update, Update) or update.message is None:
             return
