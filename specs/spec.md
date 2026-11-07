@@ -393,6 +393,7 @@ El usuario MUST recibir un mensaje claro, nunca un silencio ni una traza, ante:
 - **CA-R5.5** Documento ilegible (informado a administradores en el resumen de reindexación).
 - **CA-R5.6** Respuestas más largas que el límite de un mensaje (se dividen).
 - **CA-R5.7** El mismo texto enviado varias veces por el mismo usuario dentro de `DUPLICATE_WINDOW_SECONDS` (por un reenvío del cliente de Telegram o un Enter repetido) se responde una sola vez; las copias se descartan sin responder ni llamar al modelo. Con 0 se desactiva.
+- **CA-R5.8** Una respuesta que el modelo corta por `LLM_MAX_TOKENS` nunca termina a mitad de una palabra: se recorta a la última oración completa y el usuario recibe un aviso de que quedó incompleta. El aviso no se guarda en el historial. Si no queda ninguna oración completa, se responde "no encontrado".
 
 #### RNF-06 — Observabilidad
 
@@ -480,3 +481,11 @@ Pedido del autor: con el bot abierto por invitación, nadie puede agotar los cr�
 | Versión | Fecha | Cambio | Motivo |
 |---|---|---|---|
 | 1.0 | 2026-11-06 | Versión inicial generada con `/speckit-specify` a partir del enunciado y las notas de diseño. | — |
+| 1.1 | 2026-11-06 | CA-R1.6: cada proveedor de LLM tiene su perfil (modelo, key y parámetros); cambiar de proveedor es cambiar `LLM_PROVIDER`. | Pedido del autor: cambiar de proveedor o modelo sin tocar código (`f86f132`). |
+| 1.2 | 2026-11-06 | CA-R5.7: el mismo mensaje repetido en pocos segundos se responde una vez. | Prueba real de S6: un "hola" llegó 10 veces y el bot respondió 10 (`986fcbc`). |
+| 1.3 | 2026-11-06 | CA-06.5: respuesta cordial a saludos, agradecimientos y despedidas, sin buscar ni llamar al modelo. | Prueba real de S6: "hola" terminaba en "No encontré esa información" (`8cf3812`). |
+| 1.4 | 2026-11-06 | CA-07.5 (enlace de invitación) y RNF-08 (topes diarios y largo máximo de pregunta). | Pedido del autor: que el evaluador entre sin dar su ID antes y sin poder agotar los créditos de la API (`59c79e2`). |
+| 1.5 | 2026-11-07 | CA-R5.8: respuesta cortada por `LLM_MAX_TOKENS` recortada a la última oración completa, con aviso que no pasa al historial. | Prueba real en Telegram: "Vacaciones, extras, equipo" llegó cortada a mitad de palabra porque el modelo razonó hasta agotar el límite (T-54). |
+
+Este registro se completó el 2026-11-07 al revisar la entrega contra el enunciado: las
+versiones 1.1 a 1.4 se habían registrado en `plan.md` y en los commits, pero no aquí.
