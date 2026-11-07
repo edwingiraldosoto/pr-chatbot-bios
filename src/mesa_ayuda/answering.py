@@ -106,6 +106,9 @@ class Answer:
         usage: Consumo de tokens.
         best_score: Mejor similitud recuperada (``None`` si el índice está vacío).
         search_question: Pregunta con la que se buscó (la reformulada, si la hubo).
+        cited_fragments: Números de fragmento que citó el modelo.
+        truncated: El modelo se detuvo por ``LLM_MAX_TOKENS`` y ``text`` se recortó a la
+            última oración completa.
     """
 
     text: str
@@ -115,6 +118,7 @@ class Answer:
     best_score: float | None
     search_question: str
     cited_fragments: list[int] = field(default_factory=list)
+    truncated: bool = False
 
     @property
     def found(self) -> bool:
@@ -122,8 +126,17 @@ class Answer:
         return self.outcome is Outcome.ANSWERED
 
     def render(self) -> str:
-        """Texto para el usuario: respuesta y, separada, la línea de fuentes."""
-        return f"{self.text}\n\n{format_sources(self.sources)}" if self.sources else self.text
+        """Texto para el usuario: respuesta, aviso de recorte y, separada, la línea de fuentes.
+
+        El aviso de recorte va aquí y no en ``text`` porque ``text`` es lo que se guarda en
+        el historial: el aviso no debe volver al modelo en la siguiente pregunta.
+        """
+        parts = [self.text]
+        if self.truncated:
+            parts.append(TRUNCATED_NOTE)
+        if self.sources:
+            parts.append(format_sources(self.sources))
+        return "\n\n".join(parts)
 
 
 def is_not_found(text: str) -> bool:
@@ -269,17 +282,15 @@ class AnswerService:
         else:
             log.warning("citations_fallback", fragments=len(hits))
             cited_hits = list(hits)
-        answer_text = citations.text
-        if result.truncated:
-            answer_text = f"{answer_text}\n\n{TRUNCATED_NOTE}"
         return finish(
             Answer(
-                text=answer_text,
+                text=citations.text,
                 sources=unique_sources(cited_hits),
                 outcome=Outcome.ANSWERED,
                 usage=usage,
                 best_score=retrieval.best_score,
                 search_question=rewrite.question,
                 cited_fragments=citations.used,
+                truncated=result.truncated,
             )
         )

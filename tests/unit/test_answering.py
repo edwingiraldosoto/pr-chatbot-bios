@@ -295,10 +295,15 @@ async def test_truncated_answer_never_ends_mid_word() -> None:
         answer = await service(fake, [VACATIONS]).answer("Vacaciones, extras, equipo")
 
     assert answer.found
-    assert answer.text == (
-        "Tienes 15 días hábiles. Las colectivas se descuentan.\n\n" + TRUNCATED_NOTE
-    )
+    assert answer.truncated
+    # El texto es lo que se guarda en el historial: sin la nota, que es solo para el usuario.
+    assert answer.text == "Tienes 15 días hábiles. Las colectivas se descuentan."
     assert answer.sources == [Source("politica_vacaciones.md", "2. Días de vacaciones")]
+    assert answer.render() == (
+        "Tienes 15 días hábiles. Las colectivas se descuentan.\n\n"
+        + TRUNCATED_NOTE
+        + '\n\nFuentes: politica_vacaciones.md, sección "2. Días de vacaciones".'
+    )
     assert any(log["event"] == "answer_truncated" for log in logs)
 
 
