@@ -85,7 +85,8 @@ convention = "google"
 python_version = "3.11"
 strict = true
 plugins = ["pydantic.mypy"]
-files = ["src"]
+files = ["src", "scripts"]
+mypy_path = "src"
 
 [[tool.mypy.overrides]]
 module = ["chromadb.*", "docx.*", "pypdf.*"]

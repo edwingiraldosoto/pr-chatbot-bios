@@ -388,7 +388,8 @@ def build_service(
 def retrieval_report(cases: Sequence[Case], retriever: Retriever) -> str:
     """Sin LLM: mejor puntaje y rango de la fuente esperada por caso (para el umbral)."""
     lines = ["| Caso | Tipo | Mejor puntaje | Rango de la fuente esperada |", "|---|---|---|---|"]
-    answering, outside = [], []
+    answering: list[float] = []
+    outside: list[float] = []
     for case in cases:
         rank, best = _expected_rank(case, retriever, case.question)
         lines.append(f"| `{case.id}` | {case.kind} | {best:.3f} | {rank or '—'} |")
@@ -422,13 +423,17 @@ async def _main(args: argparse.Namespace) -> int:
     except ConfigError as error:
         print(f"Configuración inválida: {error}", file=sys.stderr)
         return 2
-    params = {
-        "umbral": args.umbral if args.umbral is not None else settings.similarity_threshold,
-        "top_k": args.top_k or settings.retrieval_top_k,
-        "fragmento": args.fragmento or settings.chunk_size,
-        "solapamiento": (
-            args.solapamiento if args.solapamiento is not None else settings.chunk_overlap
-        ),
+    threshold: float = args.umbral if args.umbral is not None else settings.similarity_threshold
+    top_k: int = args.top_k or settings.retrieval_top_k
+    chunk_size: int = args.fragmento or settings.chunk_size
+    chunk_overlap: int = (
+        args.solapamiento if args.solapamiento is not None else settings.chunk_overlap
+    )
+    params: dict[str, Any] = {
+        "umbral": threshold,
+        "top_k": top_k,
+        "fragmento": chunk_size,
+        "solapamiento": chunk_overlap,
         "modelo": settings.llm.model,
     }
     embedder = LocalEmbedder(settings.embedding_model, settings.data_dir / "models")
@@ -438,10 +443,10 @@ async def _main(args: argparse.Namespace) -> int:
         embedder,
         provider,
         eval_dir=settings.data_dir / "eval",
-        threshold=params["umbral"],
-        top_k=params["top_k"],
-        chunk_size=params["fragmento"],
-        chunk_overlap=params["solapamiento"],
+        threshold=threshold,
+        top_k=top_k,
+        chunk_size=chunk_size,
+        chunk_overlap=chunk_overlap,
     )
     cases = load_cases(args.preguntas)
     if args.solo_recuperacion:
