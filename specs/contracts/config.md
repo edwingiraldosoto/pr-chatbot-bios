@@ -9,6 +9,7 @@ defecto. Las variables de entorno usan el nombre de la columna "Variable".
 | Variable | Clave YAML | Tipo / rango | Por defecto | Dónde | Req. |
 |---|---|---|---|---|---|
 | `TELEGRAM_BOT_TOKEN` | — | secreto, obligatorio | — | `.env` | RNF-01 |
+| `INVITE_CODE` | — | secreto opcional: 12–64 caracteres `A-Z a-z 0-9 _ -` (lo que acepta un enlace `?start=`) | vacío = sin invitaciones | `.env` | CA-07.5 |
 | `LLM_PROVIDER` | `llm.provider` | `anthropic` \| `openai` \| `gemini` | `anthropic` | yaml | CA-R1.4, CA-R1.6 |
 | `LLM_MAX_TOKENS` | `llm.max_tokens` | int 50–4000 | 600 | yaml | RNF-01 |
 | `LLM_REWRITE_MAX_TOKENS` | `llm.rewrite_max_tokens` | int 20–1000 | 100 | yaml | RF-05 |
@@ -43,6 +44,9 @@ defecto. Las variables de entorno usan el nombre de la columna "Variable".
 | `ALLOWED_USER_IDS` | `access.allowed_user_ids` | lista de int (CSV en entorno) | vacía | `.env` o yaml | RF-07 |
 | `ADMIN_USER_IDS` | `access.admin_user_ids` | lista de int (CSV en entorno) | vacía | `.env` o yaml | RF-07 |
 | `RATE_LIMIT_PER_MINUTE` | `access.rate_limit_per_minute` | int ≥ 1 | 10 | yaml | CA-R5.4 |
+| `DAILY_QUESTIONS_PER_USER` | `access.daily_questions_per_user` | int 1–10000 | 50 | yaml | CA-R8.1 |
+| `DAILY_QUESTIONS_TOTAL` | `access.daily_questions_total` | int 1–100000 | 300 | yaml | CA-R8.2 |
+| `MAX_QUESTION_CHARS` | `access.max_question_chars` | int 50–4000 | 1000 | yaml | CA-R8.3 |
 | `DUPLICATE_WINDOW_SECONDS` | `access.duplicate_window_seconds` | float 0–60 (0 = desactivado) | 5 | yaml | CA-R5.7 |
 | `LOG_LEVEL` | `logging.level` | `DEBUG` \| `INFO` \| `WARNING` \| `ERROR` | `INFO` | yaml | CA-R6.3 |
 | `LOG_QUESTIONS` | `logging.log_questions` | bool | `false` | yaml | CA-R6.2 |

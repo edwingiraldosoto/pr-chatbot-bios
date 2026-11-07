@@ -307,6 +307,7 @@ El sistema MUST mantener un historial por usuario para entender preguntas de seg
 - **CA-07.2** Los demás reciben un mensaje de acceso denegado con su ID numérico de Telegram; su mensaje no se procesa ni llega al modelo.
 - **CA-07.3** Con la lista de autorizados vacía nadie tiene acceso (falla cerrada) y se avisa al arrancar.
 - **CA-07.4** Solo se atienden chats privados.
+- **CA-07.5** (Pedido del autor, para que el evaluador pueda escribirle al bot sin dar su ID antes) Con `INVITE_CODE` definido, quien abre el enlace `https://t.me/<bot>?start=<INVITE_CODE>` queda autorizado y lo sigue estando entre reinicios. Un código distinto recibe el acceso denegado. Cambiar `INVITE_CODE` retira el acceso a todos los invitados con el código anterior. Los administradores obtienen el enlace con `/invitacion`, ven los invitados con `/invitados` y retiran a uno con `/revocar <id>`. Sin `INVITE_CODE` no hay invitaciones.
 
 #### RF-08 — Reindexación por comando (D)
 
@@ -404,6 +405,16 @@ El usuario MUST recibir un mensaje claro, nunca un silencio ni una traza, ante:
 - **CA-R7.1** La lógica central tiene pruebas automatizadas que corren sin red ni API keys.
 - **CA-R7.2** El proyecto tiene formateador, linter y verificación de tipos configurados, sin errores.
 - **CA-R7.3** Módulos, clases y funciones públicas tienen docstrings; los comentarios explican el porqué.
+
+#### RNF-08 — Control de costo
+
+Pedido del autor: con el bot abierto por invitación, nadie puede agotar los créditos de la API key.
+
+- **CA-R8.1** Cada usuario hace como máximo `DAILY_QUESTIONS_PER_USER` preguntas al modelo por día; después recibe un aviso y no se llama al modelo.
+- **CA-R8.2** Entre todos los usuarios se hacen como máximo `DAILY_QUESTIONS_TOTAL` preguntas por día; después todos reciben un aviso y se registra una advertencia.
+- **CA-R8.3** Una pregunta de más de `MAX_QUESTION_CHARS` caracteres se rechaza con un aviso, sin llamar al modelo.
+- **CA-R8.4** Los administradores no tienen tope, pero sus preguntas cuentan en el total. Saludos, copias repetidas y comandos no cuentan.
+- **CA-R8.5** El día se cuenta en la zona horaria `REINDEX_TIMEZONE`. El README recomienda fijar además un tope de gasto mensual en la consola del proveedor.
 
 ### Entidades clave
 

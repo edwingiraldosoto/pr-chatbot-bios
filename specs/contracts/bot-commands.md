@@ -6,7 +6,7 @@
 ## Orden de evaluación de cada mensaje
 
 1. Chat no privado → ignorar (CA-07.4).
-2. Usuario no autorizado → acceso denegado con su ID (CA-07.2).
+2. Usuario no autorizado → acceso denegado con su ID (CA-07.2), salvo `/start <código>` con el `INVITE_CODE` vigente, que lo autoriza y le da la bienvenida (CA-07.5).
 3. Mismo texto del mismo usuario dentro de `DUPLICATE_WINDOW_SECONDS` → se descarta sin responder (CA-R5.7).
 4. Límite por minuto superado → aviso (CA-R5.4).
 5. Comando → su manejador. Texto → flujo de pregunta. Otro tipo → "solo texto" (CA-R5.3).
@@ -23,6 +23,9 @@
 | `/reindex full` | admin | Igual, con reconstrucción completa | CA-08.2 |
 | `/reindex` | autorizado no admin | "Este comando es solo para administradores." | CA-08.3 |
 | `/reindex` en curso | admin | "Ya hay una reindexación en curso." | CA-08.5 |
+| `/invitacion` | admin | El enlace de invitación, o cómo activarlo si no hay `INVITE_CODE` | CA-07.5 |
+| `/invitados` | admin | Invitados con el código vigente: ID, nombre, fecha y preguntas de hoy | CA-07.5 |
+| `/revocar <id>` | admin | Retira la invitación de ese usuario | CA-07.5 |
 
 ## Mensajes del sistema
 
@@ -74,6 +77,8 @@ Decisiones de implementación que el resto del contrato no fija:
   Las advertencias del resumen salen de los documentos nuevos o actualizados.
 - **Comando desconocido**: "No conozco ese comando. Usa /help para ver los disponibles."
 - **Mensajes editados**: se ignoran; solo se responden mensajes nuevos.
+- **Invitaciones** (CA-07.5): el código se compara en tiempo constante y nunca se escribe en el log; se guarda una huella (SHA-256) del código con que entró cada invitado, así cambiar `INVITE_CODE` los deja a todos fuera sin borrar nada. Un invitado es un usuario normal: no administra.
+- **Topes** (RNF-08): el cupo se descuenta antes de llamar al modelo, dentro de una transacción, para que dos mensajes simultáneos no pasen ambos el último cupo. Una pregunta que termina en error del modelo también cuenta. El orden dentro del flujo de pregunta es: texto vacío → saludo → largo máximo → tope diario → servicio de respuesta.
 - **Saludos, agradecimientos y despedidas** (CA-06.5): se reconocen solo si el mensaje completo es una de esas fórmulas, sin tildes, signos ni letras repetidas ("Holaaa!!", "buenas tardes", "muchas gracias", "chao"). Si trae algo más, es una pregunta. Se responden con un texto fijo, sin modelo ni historial, y se registran como `outcome=small_talk`.
 - **`/start`**: Telegram lo envía solo cuando alguien abre el bot por primera vez (botón "Iniciar"); después no hace falta usarlo, pero sigue disponible.
 - **Copias del mismo mensaje**: el texto se compara sin espacios sobrantes ni diferencias de mayúsculas, por usuario, contra el último mensaje aceptado de ese usuario. La ventana cuenta desde la primera copia, así que una ráfaga larga no la alarga sin fin. Las copias descartadas no cuentan para el límite por minuto; se registran como `outcome=duplicate`. Aplica también a los comandos (diez `/start` seguidos reciben una bienvenida). Los mensajes sin texto (fotos, audios) no se comparan.
@@ -85,6 +90,10 @@ Decisiones de implementación que el resto del contrato no fija:
 | `/reindex` con argumento desconocido | "Uso: /reindex (cambios) o /reindex full (reconstrucción completa)." |
 | La reindexación falla | "La reindexación falló: {motivo}. Revisa el log del bot." |
 | Comando desconocido | "No conozco ese comando. Usa /help para ver los disponibles." |
+| Invitación aceptada | La bienvenida de `/start` |
+| Tope diario del usuario (CA-R8.1) | "Llegaste al máximo de {n} preguntas por hoy. Vuelve a intentarlo mañana." |
+| Tope diario total (CA-R8.2) | "El asistente alcanzó el máximo de preguntas de hoy. Vuelve a intentarlo mañana." |
+| Pregunta muy larga (CA-R8.3) | "Tu pregunta es muy larga (máximo {n} caracteres). Resúmela en una o dos frases." |
 | Saludo (CA-06.5) | "Hola, {nombre}. Con gusto te ayudo con las políticas, procedimientos y guías de la empresa. Escríbeme tu pregunta, por ejemplo: ¿Cuántos días de vacaciones tengo? Usa /help para ver cómo preguntar y los comandos." |
 | Agradecimiento | "Con gusto. Si tienes otra pregunta, aquí estoy." |
 | Despedida | "Hasta pronto. Cuando necesites algo, escríbeme." |

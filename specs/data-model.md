@@ -90,6 +90,24 @@ CREATE TABLE IF NOT EXISTS unanswered (
   reformulación.
 - `/reset` ejecuta `DELETE FROM history WHERE user_id = ?`.
 
+Invitaciones y topes (CA-07.5, RNF-08):
+
+```sql
+CREATE TABLE IF NOT EXISTS invited_users (
+    user_id     INTEGER PRIMARY KEY,
+    first_name  TEXT    NOT NULL DEFAULT '',
+    code_hash   TEXT    NOT NULL,          -- SHA-256 del INVITE_CODE con que entró
+    invited_at  TEXT    NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS daily_usage (
+    day         TEXT    NOT NULL,          -- AAAA-MM-DD en REINDEX_TIMEZONE
+    user_id     INTEGER NOT NULL,
+    questions   INTEGER NOT NULL,
+    PRIMARY KEY (day, user_id)
+);
+```
+
 ## 4. Objetos en memoria
 
 | Objeto | Campos | Uso |
