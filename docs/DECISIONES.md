@@ -213,6 +213,13 @@ idioma.
   defensa, una respuesta cortada se recorta a la última oración completa y se avisa
   (CA-R5.8). Subir `LLM_MAX_TOKENS` habría escondido el problema y subido el costo del
   peor caso.
+- **Reintento (T-55, pedido del autor):** la respuesta debe salir completa. Una respuesta
+  cortada se pide de nuevo una sola vez con `LLM_TRUNCATED_RETRY_MAX_TOKENS` (1.200). Se
+  prefirió a subir `LLM_MAX_TOKENS` para todas: el margen extra solo se paga cuando hace
+  falta (ningún caso de la evaluación pasó de 284 tokens), y el peor caso sigue acotado en
+  unos USD 0,0016 por pregunta. Si el reintento también se corta, se conservan las
+  oraciones completas o, si no hay, las palabras completas; ya no se responde "no
+  encontrado" cuando el modelo sí empezó a responder.
 
 **Consecuencias.**
 - La temperatura baja, que era una de las barreras contra respuestas inventadas, se

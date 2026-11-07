@@ -126,10 +126,17 @@ Tokens medidos en la evaluación final (promedio por caso):
 | Fuera de alcance por umbral, saludo, comando | 0 | 0 | 0 | **USD 0** |
 
 **Peor caso** (estimado, no medido): 5 fragmentos completos, historial de 6 mensajes,
-reformulación y una respuesta que agota los 600 tokens.
-- Entrada: unos 3.500 tokens → USD 0,00035.
-- Salida: unos 700 tokens → USD 0,00035.
-- Total: unos **USD 0,0007**.
+reformulación y una respuesta que agota los 600 tokens y se pide de nuevo con
+`LLM_TRUNCATED_RETRY_MAX_TOKENS` (1.200), que también agota (T-55).
+- Entrada: unos 3.500 tokens por la reformulación y la primera respuesta, y otros 3.300
+  del reintento, que reenvía el mismo prompt → unos 6.800 tokens, USD 0,00068.
+- Salida: 100 de la reformulación + 600 + 1.200 = 1.900 tokens → USD 0,00095.
+- Total: unos **USD 0,0016**. Sin el reintento (`LLM_TRUNCATED_RETRY_MAX_TOKENS = 0`) sería
+  unos USD 0,0007, pero la respuesta llegaría recortada.
+
+En la evaluación ninguna respuesta se acercó al límite (máximo 284 tokens de 600), así que
+el reintento casi nunca se paga; el peor caso sirve para acotar el gasto, no para
+estimarlo.
 
 **En volumen** (estimación con los promedios de arriba, suponiendo 7 de cada 10 preguntas
 sin historial y 3 seguimientos, y redondeando hacia arriba):
@@ -138,7 +145,7 @@ sin historial y 3 seguimientos, y redondeando hacia arriba):
 |---|---|---|
 | 1.000 consultas | 1.000 | unos USD 0,31 |
 | 200 colaboradores × 5 preguntas al día × 22 días | 22.000 al mes | unos USD 7 al mes |
-| Tope total del bot (300 al día, el peor caso) | 9.000 al mes | menos de USD 6,50 al mes |
+| Tope total del bot (300 al día, todas en el peor caso) | 9.000 al mes | menos de USD 15 al mes (9.000 × USD 0,0016) |
 
 Telegram no cobra por la API de bots. Faltaría sumar la máquina donde corre el proceso: el
 bot usa unos 1,5 GB de disco y funciona en una máquina virtual pequeña, cuyo costo depende

@@ -160,9 +160,10 @@ Cambio pedido por el autor el 2026-11-06 para la evaluación (CA-07.5, RNF-08, p
 
 ## Fase S11: Ajustes posteriores a la verificación
 
-Tarea agregada después de S10 por un error visto en la prueba real en Telegram: la pregunta
+Tareas agregadas después de S10 por un error visto en la prueba real en Telegram: la pregunta
 "Vacaciones, extras, equipo" llegó cortada a mitad de palabra.
 
+- [x] T-55 Reintento de una respuesta cortada con `LLM_TRUNCATED_RETRY_MAX_TOKENS` (1200; 0 lo desactiva) y, si también se corta y no queda una oración completa, conservar las palabras completas en lugar de responder "no encontrado"; repetir la evaluación con los documentos Nubeverde — `src/mesa_ayuda/answering.py`, `src/mesa_ayuda/config.py`, `config.yaml`, `.env.example`, `docs/EVALUACION.md` — RF-03, RNF-01, RNF-05 (CA-R5.8)
 - [x] T-54 Respuesta cortada por `LLM_MAX_TOKENS`: `thinking: disabled` en Anthropic, marca `truncated` en los tres adaptadores, recorte a la última oración completa con aviso que no pasa al historial; repetir la evaluación — `src/mesa_ayuda/llm/`, `src/mesa_ayuda/answering.py`, `config.yaml`, `docs/EVALUACION.md` — RF-03, RNF-05 (CA-R5.8)
 
 ---
@@ -174,7 +175,7 @@ Tarea agregada después de S10 por un error visto en la prueba real en Telegram:
 - **S2** no depende de nada. **S3** y **S4** dependen de S2 y bloquean todas las historias.
 - **S5** depende de S4. **S6** depende de S5. **S7** depende de S6.
 - **S8** depende de S6 (y de S7 para los casos de injection desde documentos).
-- **S9** se puede adelantar en paralelo; se cierra después de S8. **S10** es la última de la entrega original; **S11** agrega T-54 después de la verificación.
+- **S9** se puede adelantar en paralelo; se cierra después de S8. **S10** es la última de la entrega original; **S11** agrega T-54 y T-55 después de la verificación.
 
 ### Dependencias entre historias
 
@@ -211,7 +212,7 @@ Estado al momento de la entrega (se actualiza al cerrar cada fase).
 | T-08 | RF-01 | S3 | Terminada | `7729028` |
 | T-09 | RF-01 | S3 | Terminada | `aa4c9a3` |
 | T-10 | RF-02 | S3 | Terminada | `df82086` |
-| T-11 | Enunciado §8 | S3 | Terminada | `ae8f903` |
+| T-11 | Enunciado §8 | S3 | Terminada (renombrada a GrupoBios en `8031edb` y devuelta a Nubeverde en `5f652d0`) | `ae8f903`, `8031edb`, `5f652d0` |
 | T-12 | RF-02 | S4 | Terminada | `02e63d6` |
 | T-13 | RF-02 | S4 | Terminada | `2ef87e7` |
 | T-14 | RF-09 | S4 | Terminada | `2440903` |
@@ -254,6 +255,7 @@ Estado al momento de la entrega (se actualiza al cerrar cada fase).
 | T-43 | Enunciado §6.6 | S9 | Terminada | `cf81c5b` |
 | T-44 | Enunciado §6.4 | S9 | Terminada | `0be0b6b` |
 | T-45 | RNF-02, RNF-03 | S10 | Terminada (resultados en `docs/USO_IA.md`, 2026-11-07) | `c80f47e` |
+| T-55 | RF-03, RNF-01, RNF-05 | S11 | Terminada | `4d324e6`, `bd648bd`, y los commits de evaluación y documentación que llevan `[T-55]` |
 | T-54 | RF-03, RNF-05 | S11 | Terminada | `4333ac2` (sin la referencia a la tarea en el mensaje), `c7070b5`, `fcc8bae`, y los commits de evaluación y documentación que llevan `[T-54]` |
 
 ### Cobertura de requisitos
@@ -262,7 +264,7 @@ Estado al momento de la entrega (se actualiza al cerrar cada fase).
 |---|---|
 | RF-01 | T-06, T-07, T-08, T-09 |
 | RF-02 | T-10, T-12, T-13, T-15 |
-| RF-03 | T-05, T-18, T-19, T-25, T-30, T-54 |
+| RF-03 | T-05, T-18, T-19, T-25, T-30, T-54, T-55 |
 | RF-04 | T-05, T-18, T-25 |
 | RF-05 | T-24, T-26 |
 | RF-06 | T-29, T-50 |
@@ -278,7 +280,7 @@ Estado al momento de la entrega (se actualiza al cerrar cada fase).
 | RNF-02 | T-32, T-36, T-40, T-45 |
 | RNF-03 | T-04, T-45 |
 | RNF-04 | T-05, T-19, T-39 |
-| RNF-05 | T-20, T-27, T-28, T-30, T-49, T-54 |
+| RNF-05 | T-20, T-27, T-28, T-30, T-49, T-54, T-55 |
 | RNF-08 | T-51, T-53 |
 | RNF-06 | T-04 |
 | RNF-07 | T-01 y las pruebas de cada tarea |

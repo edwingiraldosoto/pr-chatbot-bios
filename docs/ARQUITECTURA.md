@@ -241,8 +241,9 @@ completo de trabajo. …
   variación de ±20 %, solo ante 429, 5xx o errores de red).
 - **Parámetros por proveedor:** con Anthropic, `effort: low`, `thinking: disabled` (para
   que el razonamiento no gaste el límite de salida) y sin temperatura, porque la API ya no
-  la acepta. Si la respuesta igual se corta por `max_tokens`, se recorta a la última
-  oración completa y se avisa al usuario (CA-R5.8). Con OpenAI y Gemini, la temperatura del perfil. Contrato completo en
+  la acepta. Si la respuesta igual se corta por `max_tokens`, se pide de nuevo una vez
+  con `LLM_TRUNCATED_RETRY_MAX_TOKENS` (1.200); si también se corta, se recorta a la
+  última oración o palabra completa y se avisa al usuario (CA-R5.8). Con OpenAI y Gemini, la temperatura del perfil. Contrato completo en
   [`specs/contracts/prompt.md`](../specs/contracts/prompt.md) y
   [`specs/contracts/llm-provider.md`](../specs/contracts/llm-provider.md).
 

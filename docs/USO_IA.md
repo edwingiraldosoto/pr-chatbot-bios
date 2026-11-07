@@ -490,6 +490,33 @@ exitoso. Confirmé que la afirmación "ninguna respuesta cortada" tuviera respal
 datos: la cambié por la cifra medida (máximo 280 tokens de 600), porque los logs de esa
 ejecución no quedaron guardados.
 
+### 2026-11-07 — Reintento de respuestas cortadas y regreso a Nubeverde (T-55, T-11)
+
+**Pedidos del autor** después de la revisión anterior:
+- Una respuesta cortada sin ninguna oración completa terminaba en "no encontrado". Eso era
+  falso, porque el modelo sí había empezado a responder con los documentos. El autor
+  pidió que la respuesta saliera completa.
+- Los documentos de ejemplo debían volver a una empresa ficticia (Nubeverde).
+
+**Qué se hizo con Claude Code (Opus 5.5)**:
+- El modelo propuso un reintento único con más margen, en lugar de subir `LLM_MAX_TOKENS`
+  para todas las respuestas. Así el costo extra solo se paga cuando hace falta y el peor
+  caso queda acotado; está registrado en D-05 y en `CRITERIO_TECNICO.md`. Es configurable
+  (`LLM_TRUNCATED_RETRY_MAX_TOKENS`, 0 lo desactiva) y la configuración rechaza un valor
+  que no supere `LLM_MAX_TOKENS`, porque ese reintento se cortaría igual. Las pruebas se
+  escribieron antes que el código.
+- Los documentos se restauraron desde la versión anterior a `8031edb`, porque nadie los
+  había tocado después. Se comprobó leyendo los cuatro con los lectores del proyecto que
+  dicen Nubeverde y no GrupoBios.
+- Se repitió la evaluación completa: 30 de 30.
+
+**Correcciones**:
+- Un commit del spec arrastró los documentos restaurados, que estaban en el índice desde
+  el `git checkout`. Se rehicieron los dos commits locales, antes de cualquier push, para
+  que cada uno tuviera solo su cambio.
+- Se descartó una limpieza de finales de línea que borraba archivos versionados: no hacía
+  falta, porque git ya los guarda en LF.
+
 ### 2026-11-07 — Verificación final (S10: T-45)
 
 Resultados tal cual:
