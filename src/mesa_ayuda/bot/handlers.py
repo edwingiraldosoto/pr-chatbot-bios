@@ -19,6 +19,7 @@ import asyncio
 import time
 from collections.abc import AsyncIterator, Sequence
 from contextlib import asynccontextmanager, suppress
+from datetime import UTC, datetime, tzinfo
 from typing import Any, Protocol, cast
 
 from telegram import Bot, Message, Update
@@ -44,6 +45,9 @@ from mesa_ayuda.guards import (
     RateDecision,
     RateLimiter,
     clean_question,
+    invite_fingerprint,
+    invite_matches,
+    invite_payload,
     is_private_chat,
 )
 from mesa_ayuda.indexing.indexer import ReindexInProgressError, ReindexSummary, SourceInfo
@@ -126,6 +130,8 @@ class BotHandlers:
             evento ``question_text`` aparte.
         typing_interval: Cada cuánto se renueva "escribiendo…".
         duplicates: Filtro de copias repetidas; sin él no se filtran (CA-R5.7).
+        invite_code: ``INVITE_CODE``; sin él no hay invitaciones (CA-07.5).
+        timezone: Zona horaria del día de los topes y de ``/invitados``.
     """
 
     def __init__(
@@ -139,6 +145,8 @@ class BotHandlers:
         log_questions: bool = False,
         typing_interval: float = TYPING_INTERVAL_SECONDS,
         duplicates: DuplicateFilter | None = None,
+        invite_code: str | None = None,
+        timezone: tzinfo = UTC,
     ) -> None:
         self.access = access
         self.limiter = limiter
@@ -148,6 +156,9 @@ class BotHandlers:
         self.log_questions = log_questions
         self.typing_interval = typing_interval
         self.duplicates = duplicates or DuplicateFilter(0)
+        self.invite_code = invite_code
+        self._invite_hash = invite_fingerprint(invite_code) if invite_code else None
+        self.timezone = timezone
         self._user_locks: dict[int, asyncio.Lock] = {}
 
     def register(self, application: AnyApplication) -> None:
@@ -159,10 +170,23 @@ class BotHandlers:
         application.add_handler(CommandHandler("reset", self.reset, filters=new_message))
         application.add_handler(CommandHandler("fuentes", self.sources, filters=new_message))
         application.add_handler(CommandHandler("reindex", self.reindex, filters=new_message))
+        application.add_handler(CommandHandler("invitacion", self.invitation, filters=new_message))
+        application.add_handler(CommandHandler("invitados", self.invited, filters=new_message))
+        application.add_handler(CommandHandler("revocar", self.revoke, filters=new_message))
         application.add_handler(MessageHandler(new_message & filters.COMMAND, self.unknown))
         application.add_handler(MessageHandler(new_message & filters.TEXT, self.question))
         application.add_handler(MessageHandler(new_message, self.not_text))
         application.add_error_handler(self.on_error)
+
+    def today(self) -> str:
+        """Día actual (``AAAA-MM-DD``) en la zona horaria del bot."""
+        return datetime.now(self.timezone).date().isoformat()
+
+    def is_authorized(self, user_id: int) -> bool:
+        """Autorizado por configuración o invitado con el código vigente (CA-07.1, CA-07.5)."""
+        if self.access.is_authorized(user_id):
+            return True
+        return self._invite_hash is not None and self.storage.is_invited(user_id, self._invite_hash)
 
     def _lock(self, user_id: int) -> asyncio.Lock:
         """Candado por usuario: sus mensajes se atienden en orden, uno a la vez."""
@@ -179,8 +203,21 @@ class BotHandlers:
             log.info("message_ignored", reason="chat_not_private", chat_type=chat.type)
             raise ApplicationHandlerStop
         bind_request(request_id=new_request_id(), user_id=user.id)
-        if not self.access.is_authorized(user.id):
-            log.warning("message_handled", outcome="denied")
+        if not self.is_authorized(user.id):
+            payload = invite_payload(message.text)
+            if (
+                payload is not None
+                and self.invite_code is not None
+                and self._invite_hash is not None
+                and invite_matches(payload, self.invite_code)
+            ):
+                self.storage.invite(
+                    user.id, first_name=user.first_name or "", code_hash=self._invite_hash
+                )
+                log.info("message_handled", outcome="invited")
+                await reply(message, messages.START)
+                raise ApplicationHandlerStop
+            log.warning("message_handled", outcome="denied", invite_attempt=payload is not None)
             await reply(message, messages.access_denied(user.id))
             raise ApplicationHandlerStop
         if self.duplicates.is_duplicate(user.id, message.text):
@@ -260,6 +297,58 @@ class BotHandlers:
         ]
         await reply(message, messages.reindex_summary(summary, warnings))
         log.info("message_handled", outcome="command", command="reindex", full=full)
+
+    # --- Invitaciones (CA-07.5) -------------------------------------------------------------
+
+    async def _admin_only(self, update: Update, command: str) -> bool:
+        """``True`` si quien escribe es administrador; si no, se lo dice."""
+        if self.access.is_admin(_user_id(update)):
+            return True
+        await reply(_message(update), messages.ADMIN_ONLY)
+        log.info("message_handled", outcome="command", command=command, denied=True)
+        return False
+
+    async def invitation(self, update: Update, context: Context) -> None:
+        """``/invitacion``: el enlace para compartir con quien deba usar el bot."""
+        if not await self._admin_only(update, "invitacion"):
+            return
+        if self.invite_code is None:
+            await reply(_message(update), messages.INVITE_DISABLED)
+        else:
+            await reply(
+                _message(update), messages.invite_link(context.bot.username, self.invite_code)
+            )
+        log.info("message_handled", outcome="command", command="invitacion")
+
+    async def invited(self, update: Update, context: Context) -> None:
+        """``/invitados``: quién entró con el enlace vigente y cuánto preguntó hoy."""
+        if not await self._admin_only(update, "invitados"):
+            return
+        if self._invite_hash is None:
+            await reply(_message(update), messages.INVITE_DISABLED)
+        else:
+            users = self.storage.invited_users(self._invite_hash, day=self.today())
+            await reply(_message(update), messages.invited_list(users))
+        log.info("message_handled", outcome="command", command="invitados")
+
+    async def revoke(self, update: Update, context: Context) -> None:
+        """``/revocar <id>``: retira la invitación de un usuario."""
+        if not await self._admin_only(update, "revocar"):
+            return
+        message = _message(update)
+        args = context.args or []
+        if len(args) != 1 or not args[0].isdigit():
+            await reply(message, messages.REVOKE_USAGE)
+            return
+        target = int(args[0])
+        if self.storage.revoke(target):
+            text = messages.REVOKED
+        elif self.access.is_authorized(target):
+            text = messages.REVOKE_CONFIGURED
+        else:
+            text = messages.NOT_INVITED
+        await reply(message, text.format(user_id=target))
+        log.info("message_handled", outcome="command", command="revocar", target=target)
 
     async def unknown(self, update: Update, context: Context) -> None:
         """Comando que no existe."""

@@ -19,6 +19,7 @@ import io
 import sys
 from collections.abc import Sequence
 from dataclasses import dataclass
+from zoneinfo import ZoneInfo
 
 from telegram.error import InvalidToken, NetworkError
 from telegram.ext import Application
@@ -103,6 +104,8 @@ def build(
         answers=answers,
         log_questions=settings.log_questions,
         duplicates=DuplicateFilter(settings.duplicate_window_seconds),
+        invite_code=(settings.invite_code.get_secret_value() if settings.invite_code else None),
+        timezone=ZoneInfo(settings.reindex_timezone),
     )
     application: AnyApplication = (
         Application.builder()
@@ -154,6 +157,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         documents=sum(info.status == "indexed" for info in runtime.indexer.sources()),
         authorized=len(settings.authorized_user_ids),
         admins=len(settings.admin_user_ids),
+        invitations=settings.invite_code is not None,
     )
     try:
         runtime.application.run_polling(allowed_updates=ALLOWED_UPDATES)

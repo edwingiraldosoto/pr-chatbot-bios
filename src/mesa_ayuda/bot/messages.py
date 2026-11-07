@@ -11,6 +11,7 @@ from collections.abc import Sequence
 
 from mesa_ayuda.bot.small_talk import SmallTalk
 from mesa_ayuda.indexing.indexer import ReindexSummary, SourceInfo
+from mesa_ayuda.storage import InvitedUser
 
 TELEGRAM_LIMIT = 4096  # caracteres por mensaje, medidos en unidades UTF-16
 
@@ -41,7 +42,10 @@ _HELP_BODY = (
 _HELP_ADMIN = (
     "\n\nComandos de administrador:\n"
     "/reindex - Actualiza el índice con los documentos nuevos, modificados o borrados.\n"
-    "/reindex full - Reconstruye el índice completo."
+    "/reindex full - Reconstruye el índice completo.\n"
+    "/invitacion - Muestra el enlace de invitación.\n"
+    "/invitados - Lista quién entró con el enlace.\n"
+    "/revocar ID - Retira el acceso a un invitado."
 )
 
 RESET_DONE = "Listo, borré nuestra conversación."
@@ -85,6 +89,24 @@ REINDEX_IN_PROGRESS = "Ya hay una reindexación en curso."
 REINDEX_USAGE = "Uso: /reindex (cambios) o /reindex full (reconstrucción completa)."
 REINDEX_FAILED = "La reindexación falló: {reason}. Revisa el log del bot."
 
+INVITE_DISABLED = (
+    "Las invitaciones están desactivadas. Define INVITE_CODE en .env y reinicia el bot."
+)
+INVITE_LINK = (
+    "Enlace de invitación. Quien lo abra podrá usar el bot:\n"
+    "{link}\n\n"
+    "Para retirar el acceso a todos los invitados, cambia INVITE_CODE en .env y reinicia "
+    "el bot. Para retirar a una persona, usa /revocar con su ID (está en /invitados)."
+)
+NO_INVITED = "Nadie ha entrado todavía con el enlace vigente."
+REVOKE_USAGE = "Uso: /revocar ID. Los ID están en /invitados."
+REVOKED = "Listo: el usuario {user_id} ya no tiene acceso."
+NOT_INVITED = "El usuario {user_id} no tenía una invitación."
+REVOKE_CONFIGURED = (
+    "El usuario {user_id} está autorizado en la configuración (ALLOWED_USER_IDS o "
+    "ADMIN_USER_IDS). Para quitarlo, edita .env y reinicia el bot."
+)
+
 
 def help_text(*, is_admin: bool) -> str:
     """Ayuda según el rol: los comandos de administrador solo los ven ellos (CA-06.2)."""
@@ -111,6 +133,25 @@ def access_denied(user_id: int) -> str:
 def reindex_failed(reason: str) -> str:
     """Aviso al administrador cuando la reindexación no pudo terminar."""
     return REINDEX_FAILED.format(reason=reason.rstrip("."))
+
+
+def invite_link(bot_username: str, code: str) -> str:
+    """Mensaje con el enlace ``t.me/<bot>?start=<código>`` para el administrador."""
+    return INVITE_LINK.format(link=f"https://t.me/{bot_username}?start={code}")
+
+
+def invited_list(users: Sequence[InvitedUser]) -> str:
+    """Invitados con el código vigente (``/invitados``)."""
+    if not users:
+        return NO_INVITED
+    lines = [f"Invitados con el enlace vigente ({len(users)}):"]
+    for n, user in enumerate(users, start=1):
+        name = user.first_name or "sin nombre"
+        questions = _count(user.questions_today, "pregunta", "preguntas")
+        lines.append(
+            f"{n}. {name} (ID {user.user_id}), desde el {user.invited_at[:10]}, {questions} hoy"
+        )
+    return "\n".join(lines)
 
 
 # --- /fuentes ------------------------------------------------------------------------------

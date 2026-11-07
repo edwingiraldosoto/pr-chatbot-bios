@@ -6,6 +6,8 @@ límite por minuto → validación del texto. No dependen de Telegram, para prob
 
 from __future__ import annotations
 
+import hashlib
+import hmac
 import time
 from collections import deque
 from collections.abc import Callable, Iterable
@@ -132,3 +134,23 @@ class DuplicateFilter:
             return True
         self._last[user_id] = (key, now)
         return False
+
+
+def invite_fingerprint(code: str) -> str:
+    """Huella del código de invitación que se guarda por invitado (CA-07.5)."""
+    return hashlib.sha256(code.encode("utf-8")).hexdigest()
+
+
+def invite_payload(text: str | None) -> str | None:
+    """Parámetro de ``/start <código>`` (lo que Telegram envía al abrir el enlace)."""
+    if text is None:
+        return None
+    parts = text.split(maxsplit=1)
+    if len(parts) != 2 or parts[0].split("@", 1)[0] != "/start":
+        return None
+    return parts[1].strip()
+
+
+def invite_matches(payload: str, code: str) -> bool:
+    """Compara en tiempo constante, para no dar pistas del código por la demora."""
+    return hmac.compare_digest(payload.encode("utf-8"), code.encode("utf-8"))

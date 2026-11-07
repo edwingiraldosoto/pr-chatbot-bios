@@ -10,6 +10,9 @@ from mesa_ayuda.guards import (
     RateDecision,
     RateLimiter,
     clean_question,
+    invite_fingerprint,
+    invite_matches,
+    invite_payload,
     is_private_chat,
 )
 
@@ -162,3 +165,34 @@ def test_zero_window_disables_the_filter() -> None:
 def test_negative_window_is_rejected() -> None:
     with pytest.raises(ValueError, match="negativo"):
         DuplicateFilter(-1)
+
+
+# --- Invitaciones (T-52; CA-07.5) -----------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("text", "payload"),
+    [
+        ("/start bios-evaluacion-7Kq2xZ", "bios-evaluacion-7Kq2xZ"),
+        ("/start@mesa_bot bios-evaluacion-7Kq2xZ", "bios-evaluacion-7Kq2xZ"),
+        ("/start", None),
+        ("/help codigo", None),
+        ("hola codigo", None),
+        (None, None),
+    ],
+)
+def test_invite_payload(text: str | None, payload: str | None) -> None:
+    assert invite_payload(text) == payload
+
+
+def test_invite_matches_only_the_exact_code() -> None:
+    assert invite_matches("bios-evaluacion-7Kq2xZ", "bios-evaluacion-7Kq2xZ")
+    assert not invite_matches("bios-evaluacion-7kq2xz", "bios-evaluacion-7Kq2xZ")
+    assert not invite_matches("bios-evaluacion", "bios-evaluacion-7Kq2xZ")
+
+
+def test_fingerprint_hides_the_code_and_changes_with_it() -> None:
+    first = invite_fingerprint("bios-evaluacion-7Kq2xZ")
+
+    assert len(first) == 64 and "evaluacion" not in first
+    assert first != invite_fingerprint("bios-evaluacion-7Kq2xY")

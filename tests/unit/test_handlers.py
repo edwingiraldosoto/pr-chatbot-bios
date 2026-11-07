@@ -21,7 +21,7 @@ from mesa_ayuda.bot import messages
 from mesa_ayuda.bot.handlers import Answerer, BotHandlers
 from mesa_ayuda.bot.small_talk import SmallTalk
 from mesa_ayuda.embeddings import EmbeddingModelError
-from mesa_ayuda.guards import AccessControl, DuplicateFilter, RateLimiter
+from mesa_ayuda.guards import AccessControl, DuplicateFilter, RateLimiter, invite_fingerprint
 from mesa_ayuda.indexing.indexer import ReindexInProgressError, ReindexSummary, SourceInfo
 from mesa_ayuda.llm.base import (
     LLMAuthError,
@@ -90,6 +90,7 @@ def make_handlers(
     answers: Answerer | None = None,
     log_questions: bool = False,
     typing_interval: float = 4.0,
+    invite_code: str | None = None,
 ) -> BotHandlers:
     return BotHandlers(
         access=AccessControl(allowed=[USER], admins=[ADMIN]),
@@ -99,6 +100,7 @@ def make_handlers(
         answers=answers or ScriptedAnswers(),
         log_questions=log_questions,
         typing_interval=typing_interval,
+        invite_code=invite_code,
     )
 
 
@@ -631,3 +633,109 @@ async def test_greeting_with_a_question_is_a_question(storage: Storage, index: F
 
     assert replies[0].startswith("Tienes 15 días hábiles.")
     assert script.calls[0][0] == "Hola, ¿cuántos días de vacaciones tengo?"
+
+
+# --- Invitaciones (T-52; CA-07.5) -----------------------------------------------------------
+
+CODE = "bios-evaluacion-7Kq2xZ"
+
+
+async def test_invite_link_authorizes_and_survives_a_restart(
+    storage: Storage, index: FakeIndex
+) -> None:
+    async with TelegramHarness(make_handlers(storage, index, invite_code=CODE)) as bot:
+        assert await bot.send(STRANGER, "¿Cuántos días de vacaciones?") == [
+            messages.access_denied(STRANGER)
+        ]
+        assert await bot.send(STRANGER, f"/start {CODE}") == [messages.START]
+        answer = await bot.send(STRANGER, "¿Cuántos días de vacaciones?")
+
+    assert answer[0].startswith("Respuesta.")
+    # Proceso nuevo, misma base de datos: sigue autorizado.
+    async with TelegramHarness(make_handlers(storage, index, invite_code=CODE)) as bot:
+        assert (await bot.send(STRANGER, "/fuentes"))[0].startswith("Documentos")
+
+
+@pytest.mark.parametrize(
+    "text", [f"/start {CODE}x", "/start bios-evaluacion", "/start", f"/help {CODE}", CODE]
+)
+async def test_anything_but_the_exact_link_is_denied(
+    storage: Storage, index: FakeIndex, text: str
+) -> None:
+    async with TelegramHarness(make_handlers(storage, index, invite_code=CODE)) as bot:
+        assert await bot.send(STRANGER, text) == [messages.access_denied(STRANGER)]
+
+    assert not storage.is_invited(STRANGER, invite_fingerprint(CODE))
+
+
+async def test_without_invite_code_nobody_gets_in_by_link(
+    storage: Storage, index: FakeIndex
+) -> None:
+    async with TelegramHarness(make_handlers(storage, index)) as bot:
+        assert await bot.send(STRANGER, f"/start {CODE}") == [messages.access_denied(STRANGER)]
+
+
+async def test_changing_the_code_revokes_every_invitee(storage: Storage, index: FakeIndex) -> None:
+    async with TelegramHarness(make_handlers(storage, index, invite_code=CODE)) as bot:
+        await bot.send(STRANGER, f"/start {CODE}")
+    new_code = "bios-evaluacion-nuevo-99"
+
+    async with TelegramHarness(make_handlers(storage, index, invite_code=new_code)) as bot:
+        assert await bot.send(STRANGER, "/fuentes") == [messages.access_denied(STRANGER)]
+        assert await bot.send(STRANGER, f"/start {CODE}") == [messages.access_denied(STRANGER)]
+        assert await bot.send(STRANGER, f"/start {new_code}") == [messages.START]
+
+
+async def test_invitation_command_gives_the_link_only_to_admins(
+    storage: Storage, index: FakeIndex
+) -> None:
+    async with TelegramHarness(make_handlers(storage, index, invite_code=CODE)) as bot:
+        (link,) = await bot.send(ADMIN, "/invitacion")
+        assert await bot.send(USER, "/invitacion") == [messages.ADMIN_ONLY]
+        await bot.send(STRANGER, f"/start {CODE}")
+        assert await bot.send(STRANGER, "/invitacion") == [messages.ADMIN_ONLY]  # no administra
+
+    assert f"https://t.me/mesa_bot?start={CODE}" in link
+
+
+async def test_invitation_commands_without_code(bot: TelegramHarness) -> None:
+    assert await bot.send(ADMIN, "/invitacion") == [messages.INVITE_DISABLED]
+    assert await bot.send(ADMIN, "/invitados") == [messages.INVITE_DISABLED]
+
+
+async def test_invited_list_and_revoke(storage: Storage, index: FakeIndex) -> None:
+    async with TelegramHarness(make_handlers(storage, index, invite_code=CODE)) as bot:
+        assert await bot.send(ADMIN, "/invitados") == [messages.NO_INVITED]
+        await bot.send(STRANGER, f"/start {CODE}")
+        (listed,) = await bot.send(ADMIN, "/invitados")
+        revoked = await bot.send(ADMIN, f"/revocar {STRANGER}")
+        after = await bot.send(STRANGER, "/fuentes")
+        again = await bot.send(ADMIN, f"/revocar {STRANGER}")
+        configured = await bot.send(ADMIN, f"/revocar {USER}")
+        usage = await bot.send(ADMIN, "/revocar Luis")
+        not_admin = await bot.send(USER, f"/revocar {STRANGER}")
+
+    assert listed.startswith("Invitados con el enlace vigente (1):\n1. Usuario (ID 555), desde el ")
+    assert listed.endswith("0 preguntas hoy")
+    assert revoked == [messages.REVOKED.format(user_id=STRANGER)]
+    assert after == [messages.access_denied(STRANGER)]
+    assert again == [messages.NOT_INVITED.format(user_id=STRANGER)]
+    assert configured == [messages.REVOKE_CONFIGURED.format(user_id=USER)]
+    assert usage == [messages.REVOKE_USAGE]
+    assert not_admin == [messages.ADMIN_ONLY]
+
+
+async def test_invite_code_never_reaches_the_log(storage: Storage, index: FakeIndex) -> None:
+    stream = io.StringIO()
+    configure_logging("DEBUG", stream=stream)  # sin redacción: no debe hacer falta
+    try:
+        async with TelegramHarness(make_handlers(storage, index, invite_code=CODE)) as bot:
+            await bot.send(STRANGER, f"/start {CODE}x")
+            await bot.send(STRANGER, f"/start {CODE}")
+    finally:
+        clear_request()
+        logging.getLogger().handlers.clear()
+
+    outcomes = [json.loads(line).get("outcome") for line in stream.getvalue().splitlines()]
+    assert "denied" in outcomes and "invited" in outcomes
+    assert "evaluacion" not in stream.getvalue()

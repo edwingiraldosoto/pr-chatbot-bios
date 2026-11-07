@@ -49,10 +49,13 @@ def test_user_texts_are_plain_and_accessible() -> None:
     templates = [
         value for name, value in vars(messages).items() if name.isupper() and isinstance(value, str)
     ]
-    texts = [text.format(user_id=1, reason="motivo", hello="Hola") for text in templates]
+    texts = [
+        text.format(user_id=1, reason="motivo", hello="Hola", link="https://t.me/bot?start=codigo")
+        for text in templates
+    ]
     texts += [help_text(is_admin=True)]
     for text in texts:
-        assert not re.search(r"[*_`<>]|\[.+\]\(", text), text
+        assert not re.search(r"[*`<>]|\[.+\]\(", text), text  # INVITE_CODE lleva _
         assert all(ord(char) < 0x2600 or char == "…" for char in text), text
 
 
