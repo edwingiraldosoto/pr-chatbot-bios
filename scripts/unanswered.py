@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import io
 import sys
 from collections.abc import Sequence
 from datetime import date
@@ -64,13 +65,20 @@ def _parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--desde", type=_date, help="solo desde esta fecha (AAAA-MM-DD)")
     parser.add_argument(
-        "--separador", default=",", choices=[",", ";"], help="separador de columnas (',' o ';')"
+        "--separador",
+        default=",",
+        choices=[",", ";"],
+        metavar="{',',';'}",
+        help="separador de columnas (por defecto ',')",
     )
     return parser
 
 
 def main(argv: Sequence[str] | None = None) -> int:
     """Punto de entrada; devuelve 0 si exportó y 1 si no hay base de datos."""
+    for console in (sys.stdout, sys.stderr):  # tildes legibles en Windows y Git Bash
+        if isinstance(console, io.TextIOWrapper):
+            console.reconfigure(encoding="utf-8", errors="replace")
     args = _parser().parse_args(argv)
     if not args.db.is_file():
         print(
@@ -86,8 +94,6 @@ def main(argv: Sequence[str] | None = None) -> int:
         storage.close()
 
     if args.salida == "-":
-        if hasattr(sys.stdout, "reconfigure"):
-            sys.stdout.reconfigure(encoding="utf-8")
         write_csv(rows, sys.stdout, args.separador)
         return 0
     output = Path(args.salida)
