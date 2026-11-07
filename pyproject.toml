@@ -76,7 +76,7 @@ ignore = [
 "scripts/build_sample_docs.py" = ["D103", "E501"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["mesa_ayuda", "scripts"]
+known-first-party = ["mesa_ayuda", "scripts", "tests"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
