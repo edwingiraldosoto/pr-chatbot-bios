@@ -25,6 +25,12 @@ def utf16(text: str) -> int:
 # --- Textos ---------------------------------------------------------------------------------
 
 
+def test_welcome_names_the_fictional_company_of_the_sample_documents() -> None:
+    # CA-06.1: el saludo nombra la misma empresa que los documentos de ejemplo.
+    assert messages.START.startswith("Hola. Soy el asistente de la mesa de ayuda Nube Verde.")
+    assert "Grupo Bios" not in messages.START
+
+
 def test_admin_commands_only_in_the_admin_help() -> None:
     # CA-06.2
     assert "/reindex" not in help_text(is_admin=False)
