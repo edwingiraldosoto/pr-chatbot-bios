@@ -41,7 +41,9 @@
 - **Alternativas**: tamaño fijo (corta a mitad de idea); fragmentación semántica por
   embeddings (más lenta y difícil de explicar); por tokens (requiere el tokenizador; los
   caracteres son más fáciles de configurar para el operador).
-- **Validación**: se calibra en T-39 con 400/800/1200 y se registra el efecto.
+- **Validación (T-39)**: se midió con 500/100, 800/150 y 1200/200; se mantuvo 800/150
+  (1200 baja el menor puntaje de las preguntas que deben responderse a 0,789, por debajo
+  del umbral). Detalle en `docs/EVALUACION.md`.
 
 ## R-04 — Modelo de embeddings y almacén vectorial
 
@@ -94,8 +96,9 @@
     por `output_config.effort = "low"`.
   - Haiku 5.5 razona por defecto y esos tokens cuentan dentro de `LLM_MAX_TOKENS`. Con
     `effort = "low"` respondió sin bloques de razonamiento, lo mismo que Sonnet 5.5.
-  - Haiku 4.5 y los modelos anteriores rechazan `effort`: el adaptador no lo envía a esos
-    modelos (lista de prefijos en `llm/anthropic.py`).
+  - Haiku 4.5 y los modelos anteriores rechazan `effort`. Primero se resolvió con una lista
+    de prefijos en `llm/anthropic.py`; desde T-47 (R-08) es configuración
+    (`anthropic.effort` vacío = no se envía) y la lista se eliminó.
   - Modelo inexistente: 404; API key inválida: 401. Ambos se traducen a errores claros.
 
 ## R-06 — Prompt de sistema y estrategia contra respuestas inventadas
