@@ -16,9 +16,14 @@ pruebas los ejercitan con un Telegram falso y sin red.
 from __future__ import annotations
 
 import asyncio
-from typing import Any, Protocol
+import time
+from collections.abc import AsyncIterator, Sequence
+from contextlib import asynccontextmanager, suppress
+from typing import Any, Protocol, cast
 
-from telegram import Message, Update
+from telegram import Bot, Message, Update
+from telegram.constants import ChatAction
+from telegram.error import TelegramError
 from telegram.ext import (
     Application,
     ApplicationHandlerStop,
@@ -29,17 +34,42 @@ from telegram.ext import (
     filters,
 )
 
+from mesa_ayuda.answering import Answer
 from mesa_ayuda.bot import messages
 from mesa_ayuda.bot.messages import split_message
-from mesa_ayuda.guards import AccessControl, RateDecision, RateLimiter, is_private_chat
+from mesa_ayuda.guards import (
+    AccessControl,
+    RateDecision,
+    RateLimiter,
+    clean_question,
+    is_private_chat,
+)
 from mesa_ayuda.indexing.indexer import ReindexSummary, SourceInfo
+from mesa_ayuda.llm.base import (
+    ChatMessage,
+    LLMAuthError,
+    LLMBadRequestError,
+    LLMError,
+    LLMTimeoutError,
+)
 from mesa_ayuda.logging_setup import bind_request, get_logger, new_request_id
-from mesa_ayuda.storage import Storage
+from mesa_ayuda.storage import Storage, UnansweredReason
 
 log = get_logger(__name__)
 
 Context = ContextTypes.DEFAULT_TYPE
 AnyApplication = Application[Any, Any, Any, Any, Any, Any]
+
+
+TYPING_INTERVAL_SECONDS = 4.0  # Telegram apaga "escribiendo…" a los 5 s
+
+
+class Answerer(Protocol):
+    """Lo que el bot usa de :class:`~mesa_ayuda.answering.AnswerService`."""
+
+    async def answer(self, question: str, history: Sequence[ChatMessage] = ()) -> Answer:
+        """Responde una pregunta con fuentes o indica que no se encontró."""
+        ...
 
 
 class DocumentIndex(Protocol):
@@ -88,6 +118,11 @@ class BotHandlers:
         limiter: Límite de mensajes por minuto.
         storage: Historial y preguntas sin respuesta.
         indexer: Índice de documentos (``/fuentes``).
+        answers: Servicio de respuesta.
+        log_questions: ``LOG_QUESTIONS``: incluir el texto de la pregunta en el evento
+            ``message_handled`` (CA-R6.2). Con ``LOG_LEVEL=DEBUG`` sale siempre, en un
+            evento ``question_text`` aparte.
+        typing_interval: Cada cuánto se renueva "escribiendo…".
     """
 
     def __init__(
@@ -97,11 +132,17 @@ class BotHandlers:
         limiter: RateLimiter,
         storage: Storage,
         indexer: DocumentIndex,
+        answers: Answerer,
+        log_questions: bool = False,
+        typing_interval: float = TYPING_INTERVAL_SECONDS,
     ) -> None:
         self.access = access
         self.limiter = limiter
         self.storage = storage
         self.indexer = indexer
+        self.answers = answers
+        self.log_questions = log_questions
+        self.typing_interval = typing_interval
         self._user_locks: dict[int, asyncio.Lock] = {}
 
     def register(self, application: AnyApplication) -> None:
@@ -113,6 +154,9 @@ class BotHandlers:
         application.add_handler(CommandHandler("reset", self.reset, filters=new_message))
         application.add_handler(CommandHandler("fuentes", self.sources, filters=new_message))
         application.add_handler(MessageHandler(new_message & filters.COMMAND, self.unknown))
+        application.add_handler(MessageHandler(new_message & filters.TEXT, self.question))
+        application.add_handler(MessageHandler(new_message, self.not_text))
+        application.add_error_handler(self.on_error)
 
     def _lock(self, user_id: int) -> asyncio.Lock:
         """Candado por usuario: sus mensajes se atienden en orden, uno a la vez."""
@@ -170,3 +214,105 @@ class BotHandlers:
         """Comando que no existe."""
         await reply(_message(update), messages.UNKNOWN_COMMAND)
         log.info("message_handled", outcome="command", command="unknown")
+
+    # --- Preguntas (RF-03, RF-04, RF-05, RNF-05) --------------------------------------------
+
+    async def question(self, update: Update, context: Context) -> None:
+        """Texto: pregunta al servicio de respuesta y envía la respuesta con fuentes."""
+        message, user_id = _message(update), _user_id(update)
+        text = clean_question(message.text)
+        if text is None:
+            await self.not_text(update, context)
+            return
+        started = time.perf_counter()
+        async with self._lock(user_id):
+            async with self._typing(context.bot, message.chat_id):
+                outcome, answer_text, answer = await self._answer(user_id, text)
+            await reply(message, answer_text)
+        log.info(
+            "message_handled",
+            outcome=outcome,
+            latency_ms=round((time.perf_counter() - started) * 1000),
+            input_tokens=answer.usage.input_tokens if answer else None,
+            output_tokens=answer.usage.output_tokens if answer else None,
+            llm_calls=answer.usage.llm_calls if answer else None,
+            best_score=(
+                round(answer.best_score, 4)
+                if answer is not None and answer.best_score is not None
+                else None
+            ),
+            sources=[source.label() for source in answer.sources] if answer else [],
+            **({"question": text} if self.log_questions else {}),
+        )
+        log.debug("question_text", question=text)
+
+    async def _answer(self, user_id: int, text: str) -> tuple[str, str, Answer | None]:
+        """Resultado para el log, texto para el usuario y la respuesta (si la hubo)."""
+        try:
+            answer = await self.answers.answer(text, self.storage.history(user_id))
+        except LLMTimeoutError as error:
+            log.warning("llm_timeout", error=str(error))
+            return "error", messages.LLM_TIMEOUT, None
+        except (LLMAuthError, LLMBadRequestError) as error:
+            # Es un problema de configuración: el operador debe verlo como ERROR.
+            log.error("llm_config_error", error_type=type(error).__name__, error=str(error))
+            return "error", messages.LLM_UNAVAILABLE, None
+        except LLMError as error:
+            log.warning("llm_unavailable", error_type=type(error).__name__, error=str(error))
+            return "error", messages.LLM_UNAVAILABLE, None
+
+        if answer.found:
+            self.storage.add_turn(user_id, text, answer.text)  # sin la línea de fuentes
+            return "answered", answer.render(), answer
+        self.storage.record_unanswered(
+            user_id,
+            text,
+            rewritten=answer.search_question if answer.search_question != text else None,
+            best_score=answer.best_score,
+            reason=cast(UnansweredReason, answer.outcome.value),
+        )
+        return "not_found", messages.NOT_FOUND, answer
+
+    @asynccontextmanager
+    async def _typing(self, bot: Bot, chat_id: int) -> AsyncIterator[None]:
+        """Muestra "escribiendo…" y lo renueva mientras dura el bloque."""
+
+        async def send() -> None:
+            try:
+                await bot.send_chat_action(chat_id, ChatAction.TYPING)
+            except TelegramError as error:  # no es motivo para fallar la respuesta
+                log.debug("typing_failed", error=str(error))
+
+        async def keep_typing() -> None:
+            while True:
+                await asyncio.sleep(self.typing_interval)
+                await send()
+
+        await send()  # de inmediato, aunque la respuesta tarde poco
+        task = asyncio.create_task(keep_typing())
+        try:
+            yield
+        finally:
+            task.cancel()
+            with suppress(asyncio.CancelledError):
+                await task
+
+    async def not_text(self, update: Update, context: Context) -> None:
+        """Foto, audio, archivo, sticker o texto vacío (CA-R5.3)."""
+        await reply(_message(update), messages.ONLY_TEXT)
+        log.info("message_handled", outcome="not_text")
+
+    # --- Errores inesperados ----------------------------------------------------------------
+
+    async def on_error(self, update: object, context: Context) -> None:
+        """Registra la traza y avisa al usuario sin mostrarla (RNF-05)."""
+        log.error("message_handled", outcome="error", exc_info=context.error)
+        if not isinstance(update, Update) or update.message is None:
+            return
+        chat = update.effective_chat
+        if chat is None or not is_private_chat(chat.type):
+            return
+        try:
+            await update.message.reply_text(messages.UNEXPECTED_ERROR)
+        except TelegramError as error:
+            log.warning("error_reply_failed", error=str(error))

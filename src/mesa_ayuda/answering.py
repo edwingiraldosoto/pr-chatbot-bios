@@ -194,6 +194,9 @@ class AnswerService:
                 outcome=answer.outcome.value,
                 best_score=round(answer.best_score, 4) if answer.best_score is not None else None,
                 relevant=len(retrieval.relevant),
+                fragments=[
+                    f"{hit.source}#{hit.chunk_index}={hit.score:.3f}" for hit in retrieval.relevant
+                ],
                 rewritten=rewrite.rewritten,
                 cited=answer.cited_fragments,
                 input_tokens=answer.usage.input_tokens,

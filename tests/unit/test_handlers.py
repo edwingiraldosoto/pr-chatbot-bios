@@ -6,17 +6,31 @@ Cada prueba pasa por la ``Application`` real de python-telegram-bot: filtros, gr
 
 from __future__ import annotations
 
+import asyncio
+import io
+import json
+import logging
 from collections.abc import AsyncIterator
 from pathlib import Path
 
 import pytest
+from structlog.testing import capture_logs
 
+from mesa_ayuda.answering import Answer, Outcome, Source
 from mesa_ayuda.bot import messages
-from mesa_ayuda.bot.handlers import BotHandlers
+from mesa_ayuda.bot.handlers import Answerer, BotHandlers
 from mesa_ayuda.guards import AccessControl, RateLimiter
 from mesa_ayuda.indexing.indexer import ReindexSummary, SourceInfo
+from mesa_ayuda.llm.base import (
+    LLMAuthError,
+    LLMBadRequestError,
+    LLMTimeoutError,
+    LLMUnavailableError,
+)
+from mesa_ayuda.logging_setup import clear_request, configure_logging
 from mesa_ayuda.storage import Storage
 from tests.telegram_fake import TelegramHarness
+from tests.unit.answers_fake import ScriptedAnswers, answered, not_found
 
 USER = 111
 ADMIN = 999
@@ -53,12 +67,23 @@ def index() -> FakeIndex:
     )
 
 
-def make_handlers(storage: Storage, index: FakeIndex, *, limit: int = 10) -> BotHandlers:
+def make_handlers(
+    storage: Storage,
+    index: FakeIndex,
+    *,
+    limit: int = 10,
+    answers: Answerer | None = None,
+    log_questions: bool = False,
+    typing_interval: float = 4.0,
+) -> BotHandlers:
     return BotHandlers(
         access=AccessControl(allowed=[USER], admins=[ADMIN]),
         limiter=RateLimiter(limit),
         storage=storage,
         indexer=index,
+        answers=answers or ScriptedAnswers(),
+        log_questions=log_questions,
+        typing_interval=typing_interval,
     )
 
 
@@ -136,6 +161,7 @@ async def test_empty_access_lists_deny_everyone(storage: Storage, index: FakeInd
         limiter=RateLimiter(10),
         storage=storage,
         indexer=index,
+        answers=ScriptedAnswers(),
     )
     async with TelegramHarness(handlers) as bot:
         assert await bot.send(USER, "/start") == [messages.access_denied(USER)]
@@ -167,3 +193,241 @@ async def test_rate_limit_is_per_user(storage: Storage, index: FakeIndex) -> Non
         await bot.send(USER, "/start")
         assert await bot.send(USER, "/start") == [messages.RATE_LIMITED]
         assert await bot.send(ADMIN, "/start") == [messages.START]
+
+
+# --- Preguntas (T-30; RF-03, RF-05, RF-10, RNF-05) ------------------------------------------
+
+
+async def test_answer_ends_with_its_sources_and_is_stored_without_them(
+    storage: Storage, index: FakeIndex
+) -> None:
+    # CA-03.1; el historial guarda la respuesta sin la línea de fuentes.
+    script = ScriptedAnswers([answered("Tienes 15 días hábiles.", Source("vac.md", "Días"))])
+    async with TelegramHarness(make_handlers(storage, index, answers=script)) as bot:
+        replies = await bot.send(USER, "  ¿Cuántos días de vacaciones tengo?  ")
+
+    assert replies == ['Tienes 15 días hábiles.\n\nFuentes: vac.md, sección "Días".']
+    assert script.calls[0][0] == "¿Cuántos días de vacaciones tengo?"
+    assert [m.content for m in storage.history(USER)] == [
+        "¿Cuántos días de vacaciones tengo?",
+        "Tienes 15 días hábiles.",
+    ]
+    assert "typing" in bot.actions()
+
+
+async def test_follow_up_receives_the_user_history(storage: Storage, index: FakeIndex) -> None:
+    # RF-05: la segunda pregunta llega con el turno anterior; la de otro usuario no.
+    script = ScriptedAnswers([answered("15 días."), answered("Hasta dos periodos.")])
+    async with TelegramHarness(make_handlers(storage, index, answers=script)) as bot:
+        await bot.send(USER, "¿Cuántos días de vacaciones?")
+        await bot.send(USER, "¿y se acumulan?")
+        await bot.send(ADMIN, "otra cosa")
+
+    assert script.calls[0][1] == []
+    assert [m.content for m in script.calls[1][1]] == ["¿Cuántos días de vacaciones?", "15 días."]
+    assert script.calls[2][1] == []  # CA-05.3
+
+
+async def test_below_threshold_is_recorded_and_not_kept_in_history(
+    storage: Storage, index: FakeIndex
+) -> None:
+    # CA-04.1, CA-10.1
+    script = ScriptedAnswers([not_found(best_score=0.7581)])
+    async with TelegramHarness(make_handlers(storage, index, answers=script)) as bot:
+        replies = await bot.send(USER, "¿Cuál es la capital de Australia?")
+
+    assert replies == [messages.NOT_FOUND]
+    assert storage.history(USER) == []
+    (row,) = storage.unanswered()
+    assert (row.user_id, row.question, row.rewritten, row.best_score, row.reason) == (
+        USER,
+        "¿Cuál es la capital de Australia?",
+        None,  # igual a la original: no se repite
+        0.7581,
+        "below_threshold",
+    )
+
+
+async def test_model_not_found_records_the_rewritten_question(
+    storage: Storage, index: FakeIndex
+) -> None:
+    script = ScriptedAnswers(
+        [not_found(Outcome.LLM_NOT_FOUND, search_question="¿Cuál es el salario del gerente?")]
+    )
+    async with TelegramHarness(make_handlers(storage, index, answers=script)) as bot:
+        assert await bot.send(USER, "¿y el del gerente?") == [messages.NOT_FOUND]
+
+    (row,) = storage.unanswered()
+    assert (row.rewritten, row.reason) == ("¿Cuál es el salario del gerente?", "llm_not_found")
+
+
+@pytest.mark.parametrize(
+    ("error", "expected"),
+    [
+        (LLMTimeoutError("30 s"), messages.LLM_TIMEOUT),  # CA-R5.2
+        (LLMUnavailableError("503"), messages.LLM_UNAVAILABLE),  # CA-R5.1
+        (LLMAuthError("401"), messages.LLM_UNAVAILABLE),
+        (LLMBadRequestError("404 modelo"), messages.LLM_UNAVAILABLE),
+    ],
+)
+async def test_llm_errors_become_clear_messages(
+    storage: Storage, index: FakeIndex, error: Exception, expected: str
+) -> None:
+    handlers = make_handlers(storage, index, answers=ScriptedAnswers([error]))
+    async with TelegramHarness(handlers) as bot:
+        assert await bot.send(USER, "¿Cuántos días?") == [expected]
+
+    assert storage.history(USER) == []
+    assert storage.unanswered() == []
+
+
+async def test_configuration_errors_are_logged_as_errors(
+    storage: Storage, index: FakeIndex
+) -> None:
+    script = ScriptedAnswers([LLMAuthError("401 invalid x-api-key")])
+    async with TelegramHarness(make_handlers(storage, index, answers=script)) as bot:
+        with capture_logs() as logs:
+            await bot.send(USER, "¿Cuántos días?")
+
+    (event,) = [e for e in logs if e["event"] == "llm_config_error"]
+    assert event["log_level"] == "error"
+    assert event["error_type"] == "LLMAuthError"
+
+
+async def test_unexpected_error_shows_no_trace(storage: Storage, index: FakeIndex) -> None:
+    script = ScriptedAnswers([RuntimeError("detalle interno /ruta/secreta.py")])
+    async with TelegramHarness(make_handlers(storage, index, answers=script)) as bot:
+        with capture_logs() as logs:
+            replies = await bot.send(USER, "¿Cuántos días?")
+
+    assert replies == [messages.UNEXPECTED_ERROR]
+    assert any(e.get("outcome") == "error" and e["log_level"] == "error" for e in logs)
+
+
+FILE = {"file_id": "f", "file_unique_id": "u"}
+
+
+@pytest.mark.parametrize(
+    "content",
+    [
+        {"photo": [{**FILE, "width": 1, "height": 1}]},
+        {"voice": {**FILE, "duration": 3}},
+        {
+            "sticker": {
+                **FILE,
+                "width": 1,
+                "height": 1,
+                "is_animated": False,
+                "is_video": False,
+                "type": "regular",
+            }
+        },
+        {"document": {**FILE, "file_name": "a.pdf"}},
+    ],
+    ids=["foto", "audio", "sticker", "archivo"],
+)
+async def test_non_text_messages_suggest_dictation(
+    bot: TelegramHarness, content: dict[str, object]
+) -> None:
+    # CA-R5.3
+    assert await bot.send(USER, **content) == [messages.ONLY_TEXT]
+
+
+async def test_blank_text_is_treated_as_no_text(storage: Storage, index: FakeIndex) -> None:
+    script = ScriptedAnswers()
+    async with TelegramHarness(make_handlers(storage, index, answers=script)) as bot:
+        assert await bot.send(USER, " \n ") == [messages.ONLY_TEXT]
+
+    assert script.calls == []
+
+
+async def test_long_answer_is_sent_in_parts_with_sources_last(
+    storage: Storage, index: FakeIndex
+) -> None:
+    # CA-R5.6
+    long_text = "\n\n".join(f"Paso {n}." + " detalle" * 120 for n in range(1, 11))
+    script = ScriptedAnswers([answered(long_text, Source("guia.pdf", page=3))])
+    async with TelegramHarness(make_handlers(storage, index, answers=script)) as bot:
+        replies = await bot.send(USER, "¿Cómo configuro la VPN?")
+
+    assert len(replies) > 1
+    assert all(len(part) <= 4096 for part in replies)
+    assert replies[-1].endswith("Fuentes: guia.pdf, página 3.")
+    assert sum("Fuentes:" in part for part in replies) == 1
+
+
+@pytest.mark.parametrize("enabled", [False, True])
+async def test_question_text_is_only_logged_when_enabled(
+    storage: Storage, index: FakeIndex, enabled: bool
+) -> None:
+    # CA-R6.1, CA-R6.2
+    question = "¿Cuánto gana el gerente?"
+    async with TelegramHarness(make_handlers(storage, index, log_questions=enabled)) as bot:
+        with capture_logs() as logs:
+            await bot.send(USER, question)
+
+    (event,) = [e for e in logs if e["event"] == "message_handled"]
+    assert event["outcome"] == "answered"
+    assert {"latency_ms", "input_tokens", "output_tokens", "best_score"} <= set(event)
+    assert event["sources"] == ['politica_vacaciones.md, sección "Días"']
+    assert ("question" in event) is enabled
+    # Fuera de DEBUG, el texto solo aparece si se habilitó.
+    visible = [e for e in logs if e["log_level"] != "debug" and question in str(e)]
+    assert bool(visible) is enabled
+
+
+async def test_every_event_of_a_message_carries_request_and_user(
+    storage: Storage, index: FakeIndex
+) -> None:
+    # CA-R6.1, con la configuración real de logs (JSON por línea).
+    stream = io.StringIO()
+    configure_logging("INFO", stream=stream)
+    try:
+        async with TelegramHarness(make_handlers(storage, index)) as bot:
+            await bot.send(USER, "¿Cuánto gana el gerente?")
+            await bot.send(STRANGER, "hola")
+    finally:
+        clear_request()
+        logging.getLogger().handlers.clear()
+
+    events = [json.loads(line) for line in stream.getvalue().splitlines()]
+    handled = [e for e in events if e["event"] == "message_handled"]
+    assert [(e["outcome"], e["user_id"]) for e in handled] == [
+        ("answered", USER),
+        ("denied", STRANGER),
+    ]
+    assert handled[0]["request_id"] != handled[1]["request_id"]
+    assert "gerente" not in stream.getvalue()  # CA-R6.2 con LOG_LEVEL=INFO
+
+
+async def test_typing_is_renewed_while_the_answer_takes_long(
+    storage: Storage, index: FakeIndex
+) -> None:
+    script = ScriptedAnswers(delay=0.12)
+    handlers = make_handlers(storage, index, answers=script, typing_interval=0.03)
+    async with TelegramHarness(handlers) as bot:
+        await bot.send(USER, "¿Cuántos días?")
+        sent_after_answer = len(bot.actions())
+        await asyncio.sleep(0.1)
+
+    assert sent_after_answer >= 3
+    assert len(bot.actions()) == sent_after_answer  # se detiene al responder
+
+
+async def test_messages_of_one_user_wait_their_turn_others_do_not(
+    storage: Storage, index: FakeIndex
+) -> None:
+    order: list[str] = []
+
+    async def slow(question: str) -> Answer:
+        order.append(f"inicio {question}")
+        await asyncio.sleep(0.05)
+        order.append(f"fin {question}")
+        return answered("ok", question=question)
+
+    script = ScriptedAnswers([slow, slow, slow])
+    async with TelegramHarness(make_handlers(storage, index, answers=script)) as bot:
+        await asyncio.gather(bot.send(USER, "a"), bot.send(USER, "b"), bot.send(ADMIN, "c"))
+
+    assert order.index("fin a") < order.index("inicio b")  # el mismo usuario, en orden
+    assert order.index("inicio c") < order.index("fin a")  # otro usuario no espera
