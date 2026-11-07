@@ -7,8 +7,9 @@
 
 1. Chat no privado → ignorar (CA-07.4).
 2. Usuario no autorizado → acceso denegado con su ID (CA-07.2).
-3. Límite por minuto superado → aviso (CA-R5.4).
-4. Comando → su manejador. Texto → flujo de pregunta. Otro tipo → "solo texto" (CA-R5.3).
+3. Mismo texto del mismo usuario dentro de `DUPLICATE_WINDOW_SECONDS` → se descarta sin responder (CA-R5.7).
+4. Límite por minuto superado → aviso (CA-R5.4).
+5. Comando → su manejador. Texto → flujo de pregunta. Otro tipo → "solo texto" (CA-R5.3).
 
 ## Comandos
 
@@ -73,6 +74,7 @@ Decisiones de implementación que el resto del contrato no fija:
   Las advertencias del resumen salen de los documentos nuevos o actualizados.
 - **Comando desconocido**: "No conozco ese comando. Usa /help para ver los disponibles."
 - **Mensajes editados**: se ignoran; solo se responden mensajes nuevos.
+- **Copias del mismo mensaje**: el texto se compara sin espacios sobrantes ni diferencias de mayúsculas, por usuario, contra el último mensaje aceptado de ese usuario. La ventana cuenta desde la primera copia, así que una ráfaga larga no la alarga sin fin. Las copias descartadas no cuentan para el límite por minuto; se registran como `outcome=duplicate`. Aplica también a los comandos (diez `/start` seguidos reciben una bienvenida). Los mensajes sin texto (fotos, audios) no se comparan.
 - **Arranque**: la indexación inicial termina antes de empezar a recibir mensajes. Los
   mensajes enviados mientras el bot estaba apagado se responden al arrancar.
 

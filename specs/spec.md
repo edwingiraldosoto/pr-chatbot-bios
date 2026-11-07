@@ -232,6 +232,7 @@ del mínimo.
 - **Respuesta más larga que el límite de un mensaje de Telegram (4096 caracteres)**: se divide en varios mensajes (RNF-05).
 - **El servicio del modelo de lenguaje no responde o tarda demasiado**: tras reintentos para errores transitorios, el usuario recibe un mensaje claro de servicio no disponible o de tiempo agotado (RNF-05).
 - **Usuario que envía muchos mensajes seguidos**: por encima de `RATE_LIMIT_PER_MINUTE` recibe un aviso de espera y sus mensajes no se procesan (RNF-05).
+- **El mismo mensaje llega repetido en pocos segundos** (visto en la prueba real: un "hola" llegó 10 veces): se responde la primera copia y las demás se descartan (CA-R5.7).
 - **PDF escaneado sin texto, archivo corrupto o protegido**: se omite, se reporta como ilegible y el resto se indexa (RF-01).
 - **Archivo de texto en codificación de Windows (cp1252)**: se lee con tildes y eñes correctas (RF-01).
 - **Archivos temporales de Office (`~$*`), ocultos o con extensión no soportada**: se ignoran y se registran (RF-01).
@@ -389,6 +390,7 @@ El usuario MUST recibir un mensaje claro, nunca un silencio ni una traza, ante:
 - **CA-R5.4** Más de `RATE_LIMIT_PER_MINUTE` mensajes por minuto.
 - **CA-R5.5** Documento ilegible (informado a administradores en el resumen de reindexación).
 - **CA-R5.6** Respuestas más largas que el límite de un mensaje (se dividen).
+- **CA-R5.7** El mismo texto enviado varias veces por el mismo usuario dentro de `DUPLICATE_WINDOW_SECONDS` (por un reenvío del cliente de Telegram o un Enter repetido) se responde una sola vez; las copias se descartan sin responder ni llamar al modelo. Con 0 se desactiva.
 
 #### RNF-06 — Observabilidad
 

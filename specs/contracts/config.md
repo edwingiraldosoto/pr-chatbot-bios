@@ -43,6 +43,7 @@ defecto. Las variables de entorno usan el nombre de la columna "Variable".
 | `ALLOWED_USER_IDS` | `access.allowed_user_ids` | lista de int (CSV en entorno) | vacía | `.env` o yaml | RF-07 |
 | `ADMIN_USER_IDS` | `access.admin_user_ids` | lista de int (CSV en entorno) | vacía | `.env` o yaml | RF-07 |
 | `RATE_LIMIT_PER_MINUTE` | `access.rate_limit_per_minute` | int ≥ 1 | 10 | yaml | CA-R5.4 |
+| `DUPLICATE_WINDOW_SECONDS` | `access.duplicate_window_seconds` | float 0–60 (0 = desactivado) | 5 | yaml | CA-R5.7 |
 | `LOG_LEVEL` | `logging.level` | `DEBUG` \| `INFO` \| `WARNING` \| `ERROR` | `INFO` | yaml | CA-R6.3 |
 | `LOG_QUESTIONS` | `logging.log_questions` | bool | `false` | yaml | CA-R6.2 |
 | `DATA_DIR` | `storage.data_dir` | ruta | `./data` | yaml | RF-02 |

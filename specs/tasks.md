@@ -102,14 +102,18 @@ Cambio pedido por el autor el 2026-11-06 (CA-R1.6, plan 1.4):
 
 **Prueba independiente**: escenarios 1–15 de [quickstart.md](quickstart.md) con el bot real.
 
-- [ ] T-26 [US4] [US8] Almacenamiento SQLite: historial con límite por usuario, `/reset`, preguntas sin respuesta — `src/mesa_ayuda/storage.py`, `tests/unit/test_storage.py` — RF-05 (CA-05.2–CA-05.4), RF-10 (CA-10.1)
-- [ ] T-27 [P] [US3] Guardas: control de acceso, solo chats privados, límite por minuto, validación de mensaje — `src/mesa_ayuda/guards.py`, `tests/unit/test_guards.py` — RF-07, CA-R5.3, CA-R5.4
-- [ ] T-28 [P] [US10] Textos del bot y división de mensajes largos — `src/mesa_ayuda/bot/messages.py`, `tests/unit/test_messages.py` — RNF-05 (CA-R5.6), RF-12
-- [ ] T-29 [US5] Comandos `/start`, `/help` (por rol), `/reset`, `/fuentes` — `src/mesa_ayuda/bot/handlers.py`, `tests/unit/test_handlers.py` — RF-06
-- [ ] T-30 [US1] [US2] Manejador de texto (typing, servicio de respuesta, errores) y de mensajes no textuales — `src/mesa_ayuda/bot/handlers.py`, `tests/unit/test_handlers.py` — RF-03, RNF-05
-- [ ] T-31 [US6] `/reindex` y `/reindex full` solo para administradores, con resumen — `src/mesa_ayuda/bot/handlers.py`, `tests/unit/test_handlers.py` — RF-08
-- [ ] T-32 [US7] Punto de entrada: config → logs → indexación inicial → polling; stdout/stderr en UTF-8 para que los errores de configuración se lean bien en la consola de Windows — `src/mesa_ayuda/__main__.py` — RNF-02
-- [ ] T-33 [P] [US8] Exportación de preguntas sin respuesta a CSV — `scripts/unanswered.py` — RF-10 (CA-10.2)
+- [x] T-26 [US4] [US8] Almacenamiento SQLite: historial con límite por usuario, `/reset`, preguntas sin respuesta — `src/mesa_ayuda/storage.py`, `tests/unit/test_storage.py` — RF-05 (CA-05.2–CA-05.4), RF-10 (CA-10.1)
+- [x] T-27 [P] [US3] Guardas: control de acceso, solo chats privados, límite por minuto, validación de mensaje — `src/mesa_ayuda/guards.py`, `tests/unit/test_guards.py` — RF-07, CA-R5.3, CA-R5.4
+- [x] T-28 [P] [US10] Textos del bot y división de mensajes largos — `src/mesa_ayuda/bot/messages.py`, `tests/unit/test_messages.py` — RNF-05 (CA-R5.6), RF-12
+- [x] T-29 [US5] Comandos `/start`, `/help` (por rol), `/reset`, `/fuentes` — `src/mesa_ayuda/bot/handlers.py`, `tests/unit/test_handlers.py` — RF-06
+- [x] T-30 [US1] [US2] Manejador de texto (typing, servicio de respuesta, errores) y de mensajes no textuales — `src/mesa_ayuda/bot/handlers.py`, `tests/unit/test_handlers.py` — RF-03, RNF-05
+- [x] T-31 [US6] `/reindex` y `/reindex full` solo para administradores, con resumen — `src/mesa_ayuda/bot/handlers.py`, `tests/unit/test_handlers.py` — RF-08
+- [x] T-32 [US7] Punto de entrada: config → logs → indexación inicial → polling; stdout/stderr en UTF-8 para que los errores de configuración se lean bien en la consola de Windows — `src/mesa_ayuda/__main__.py` — RNF-02
+- [x] T-33 [P] [US8] Exportación de preguntas sin respuesta a CSV — `scripts/unanswered.py` — RF-10 (CA-10.2)
+
+Cambio pedido por el autor el 2026-11-06 tras la prueba real (CA-R5.7, plan 1.6):
+
+- [ ] T-49 [US3] Filtro de mensajes repetidos por usuario con `DUPLICATE_WINDOW_SECONDS` — `src/mesa_ayuda/guards.py`, `src/mesa_ayuda/bot/handlers.py`, `src/mesa_ayuda/config.py`, `config.yaml`, `.env.example`, `tests/unit/test_guards.py`, `tests/unit/test_handlers.py` — RNF-05 (CA-R5.7)
 
 **Punto de control**: obligatorios RF-01 a RF-07 y deseables RF-08 a RF-10 funcionando en Telegram.
 
@@ -209,14 +213,15 @@ Estado al momento de la entrega (se actualiza al cerrar cada fase).
 | T-46 | RNF-01 | S5 | Terminada | `26c4a55` |
 | T-47 | RNF-01 | S5 | Terminada | `26c4a55` |
 | T-48 | RNF-01 | S5 | Terminada | `3074064` |
-| T-26 | RF-05, RF-10 | S6 | Pendiente | — |
-| T-27 | RF-07, RNF-05 | S6 | Pendiente | — |
-| T-28 | RNF-05, RF-12 | S6 | Pendiente | — |
-| T-29 | RF-06 | S6 | Pendiente | — |
-| T-30 | RF-03, RNF-05 | S6 | Pendiente | — |
-| T-31 | RF-08 | S6 | Pendiente | — |
-| T-32 | RNF-02 | S6 | Pendiente | — |
-| T-33 | RF-10 | S6 | Pendiente | — |
+| T-26 | RF-05, RF-10 | S6 | Terminada | `bb0c4bc` |
+| T-27 | RF-07, RNF-05 | S6 | Terminada | `3666f58` |
+| T-28 | RNF-05, RF-12 | S6 | Terminada | `903a978` |
+| T-29 | RF-06 | S6 | Terminada | `1de00bd`, `2b5cb09` |
+| T-30 | RF-03, RNF-05 | S6 | Terminada | `12a7c1b` |
+| T-31 | RF-08 | S6 | Terminada | `1bb7a09` |
+| T-32 | RNF-02 | S6 | Terminada | `10eb774` |
+| T-33 | RF-10 | S6 | Terminada | `151b2f8`, `cea464d` |
+| T-49 | RNF-05 | S6 | Pendiente | — |
 | T-34 | RF-13 | S7 | Pendiente | — |
 | T-35 | RF-11 | S7 | Pendiente | — |
 | T-36 | RNF-02 | S7 | Pendiente | — |
@@ -252,6 +257,6 @@ Estado al momento de la entrega (se actualiza al cerrar cada fase).
 | RNF-02 | T-32, T-36, T-40, T-45 |
 | RNF-03 | T-04, T-45 |
 | RNF-04 | T-05, T-19, T-39 |
-| RNF-05 | T-20, T-27, T-28, T-30 |
+| RNF-05 | T-20, T-27, T-28, T-30, T-49 |
 | RNF-06 | T-04 |
 | RNF-07 | T-01 y las pruebas de cada tarea |
