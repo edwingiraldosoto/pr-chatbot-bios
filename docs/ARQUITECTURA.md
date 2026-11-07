@@ -239,8 +239,10 @@ completo de trabajo. …
 - **Parámetros de la llamada:** `max_tokens = LLM_MAX_TOKENS` (600) y un tiempo total de
   `LLM_TIMEOUT_SECONDS` (30 s), reintentos incluidos (hasta 2, con espera exponencial y
   variación de ±20 %, solo ante 429, 5xx o errores de red).
-- **Parámetros por proveedor:** con Anthropic, `effort: low` y sin temperatura, porque la
-  API ya no la acepta. Con OpenAI y Gemini, la temperatura del perfil. Contrato completo en
+- **Parámetros por proveedor:** con Anthropic, `effort: low`, `thinking: disabled` (para
+  que el razonamiento no gaste el límite de salida) y sin temperatura, porque la API ya no
+  la acepta. Si la respuesta igual se corta por `max_tokens`, se recorta a la última
+  oración completa y se avisa al usuario (CA-R5.8). Con OpenAI y Gemini, la temperatura del perfil. Contrato completo en
   [`specs/contracts/prompt.md`](../specs/contracts/prompt.md) y
   [`specs/contracts/llm-provider.md`](../specs/contracts/llm-provider.md).
 

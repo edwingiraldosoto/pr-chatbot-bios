@@ -17,6 +17,7 @@ class LLMResult:
     input_tokens: int
     output_tokens: int
     model: str
+    truncated: bool = False   # se detuvo por max_tokens (T-54, CA-R5.8)
 
 class LLMProvider(Protocol):
     name: str
@@ -57,7 +58,7 @@ adaptador no la envía nunca, aunque la llamada pida una (la reformulación pide
 
 | Proveedor | `temperature` | Límite de salida | Otros |
 |---|---|---|---|
-| Anthropic | Nunca (el SDK 2.6 la retiró) | `max_tokens` | `output_config.effort` = `LLM_ANTHROPIC_EFFORT` (vacío: no se envía; R-05) |
+| Anthropic | Nunca (el SDK 2.6 la retiró) | `max_tokens` | `output_config.effort` = `LLM_ANTHROPIC_EFFORT` y `thinking.type` = `LLM_ANTHROPIC_THINKING` (vacíos: no se envían; R-05, T-54) |
 | OpenAI | `LLM_OPENAI_TEMPERATURE` (vacío: no se envía) | `LLM_OPENAI_TOKEN_PARAM`; `auto` = `max_completion_tokens` en la API oficial y `max_tokens` con URL propia | `reasoning_effort` = `LLM_OPENAI_REASONING_EFFORT` (vacío: no se envía) |
 | Gemini | `LLM_GEMINI_TEMPERATURE` (vacío: no se envía) | `max_output_tokens` | — |
 

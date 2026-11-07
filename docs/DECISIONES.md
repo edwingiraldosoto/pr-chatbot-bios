@@ -193,7 +193,7 @@ configuración.
 idioma.
 
 **Decisión.**
-- **Por defecto:** Anthropic `claude-haiku-5-5` con `effort: low`.
+- **Por defecto:** Anthropic `claude-haiku-5-5` con `effort: low` y `thinking: disabled`.
 - **Otros adaptadores:** OpenAI (y cualquier API compatible mediante `base_url`, incluido
   Ollama) y Google Gemini.
 
@@ -206,6 +206,13 @@ idioma.
   - El SDK 2.6 ya no acepta `temperature`, así que no se envía.
   - Haiku 5.5 razona por defecto y esos tokens cuentan en `LLM_MAX_TOKENS`. Con
     `effort: low` respondió sin bloques de razonamiento.
+- **Corrección posterior (T-54):** `effort: low` no bastó. Ante una pregunta de varios
+  temas ("Vacaciones, extras, equipo") el modelo razonó hasta agotar los 600 tokens y la
+  respuesta llegó cortada en 2 de 3 intentos. Con `thinking: disabled` respondió completa
+  en 3 de 3 (270 a 380 tokens), y la evaluación repetida pasó los 30 casos. Como segunda
+  defensa, una respuesta cortada se recorta a la última oración completa y se avisa
+  (CA-R5.8). Subir `LLM_MAX_TOKENS` habría escondido el problema y subido el costo del
+  peor caso.
 
 **Consecuencias.**
 - La temperatura baja, que era una de las barreras contra respuestas inventadas, se
@@ -237,8 +244,8 @@ similitud de e5 no separa bien "tema parecido" de "respuesta presente".
    responden en parte, decir qué falta; si se contradicen, mostrar ambas versiones.
 3. **Citas por código:** el modelo marca `[n]` y el código arma la línea "Fuentes:" desde
    los metadatos del índice. Un número inexistente se descarta y se registra en el log.
-4. **Muestreo conservador:** `effort: low` en Anthropic y temperatura baja en OpenAI y
-   Gemini.
+4. **Muestreo conservador:** `effort: low` y `thinking: disabled` en Anthropic, y
+   temperatura baja en OpenAI y Gemini.
 
 **Justificación.**
 - Cada barrera cubre un hueco de la anterior. El umbral ahorra la llamada en lo obvio
