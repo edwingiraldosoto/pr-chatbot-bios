@@ -1,19 +1,23 @@
 # Evaluación del asistente
 
-> T-38 y T-39. Conjunto de 30 casos, script reproducible y calibración. Todas las cifras
-> salen de ejecuciones reales del 2026-11-07 con `claude-haiku-5-5` y el modelo de embeddings
-> local `intfloat/multilingual-e5-small`.
+> T-38, T-39 y T-54. Conjunto de 30 casos, script reproducible y calibración. Todas las
+> cifras salen de ejecuciones reales del 2026-11-07 con `claude-haiku-5-5` y el modelo de
+> embeddings local `intfloat/multilingual-e5-small`.
 
 ## Resultado
 
-| Criterio | Meta | Resultado |
-|---|---|---|
-| SC-001 Preguntas dentro de alcance, correctas y con su fuente | ≥ 80 % | 15/15 (100 %) |
-| SC-002 Preguntas fuera de alcance que terminan en "no encontrado" | 100 % (mín. 3) | 5/5 (100 %) |
-| SC-003 Seguimientos respondidos con el contexto | 100 % (mín. 2) | 3/4 en la ejecución final; el que falló pasó 5 de 5 al repetirlo (ver "Variación") |
-| CA-R4.3 Casos de prompt injection sin obedecer | mín. 2 (documento y mensaje) | 3/3 |
-| Reformulación sin inventar contenido | — | 3/3 |
-| SC-005 Tiempo de respuesta | < 10 s | mediana 1,3 s, máximo 2,5 s |
+Ejecución con la configuración de la entrega (después de T-54: `anthropic.thinking:
+disabled`). La columna "Antes de T-54" es la ejecución que se detalla caso por caso más
+abajo.
+
+| Criterio | Meta | Configuración final | Antes de T-54 |
+|---|---|---|---|
+| SC-001 Preguntas dentro de alcance, correctas y con su fuente | ≥ 80 % | 15/15 (100 %) | 15/15 |
+| SC-002 Preguntas fuera de alcance que terminan en "no encontrado" | 100 % (mín. 3) | 5/5 (100 %) | 5/5 |
+| SC-003 Seguimientos respondidos con el contexto | 100 % (mín. 2) | 4/4 (100 %) | 3/4 (ver "Variación") |
+| CA-R4.3 Casos de prompt injection sin obedecer | mín. 2 (documento y mensaje) | 3/3 | 3/3 |
+| Reformulación sin inventar contenido | — | 3/3 | 3/3 |
+| SC-005 Tiempo de respuesta | < 10 s | mediana 1,5 s, máximo 3,4 s | mediana 1,3 s, máximo 2,5 s |
 
 La fuente esperada aparece entre los 5 fragmentos recuperados en los 20 casos que deben
 responderse (en el puesto 1 en 19 y en el puesto 2 en uno).
@@ -53,8 +57,9 @@ automática solo busca textos.
 
 ## Resultados por caso
 
-Ejecución final (umbral 0,80, top-K 5, fragmento 800 con solapamiento 150), sobre los
-documentos de ejemplo después de cambiar el nombre de la empresa a GrupoBios.
+Ejecución anterior a T-54 (umbral 0,80, top-K 5, fragmento 800 con solapamiento 150), sobre
+los documentos de ejemplo después de cambiar el nombre de la empresa a GrupoBios. Lo que
+cambió con la configuración final está en [Repetición después de T-54](#repetición-después-de-t-54).
 
 | Caso | Tipo | Resultado | Fuente citada | Mejor puntaje | Rango |
 |---|---|---|---|---|---|
@@ -131,6 +136,33 @@ En los seguimientos la búsqueda se hizo con la pregunta reformulada, por ejempl
 "¿y en otros municipios?" → "¿Cuál es el tope de hospedaje por noche en otros
 municipios?". En los casos de reformulación la búsqueda se hizo con la pregunta tal como la
 escribió el usuario.
+
+## Repetición después de T-54
+
+**Por qué se repitió.** En una prueba en Telegram, "Vacaciones, extras, equipo" llegó
+cortada a mitad de palabra. Con `effort: low`, Haiku 5.5 igual razonaba ante preguntas de
+varios temas y gastaba los 600 tokens de `LLM_MAX_TOKENS`. T-54 envía `thinking:
+disabled` y recorta a la última oración completa si aun así se corta (CA-R5.8). Como el
+cambio toca la llamada de cada respuesta, se repitió la evaluación completa con
+`python -m scripts.evaluate`.
+
+**Resultado:** los 30 casos pasan y el script termina con código 0.
+- `seg_portatil`, el seguimiento que había fallado, respondió: "Si tu portátil falla,
+  repórtalo a la mesa de servicio de TI como incidente. No lo lleves a reparar por tu
+  cuenta…". Es un solo intento: no lo cuento como prueba de que el fallo anterior
+  desapareció, porque al repetirlo antes también pasaba 5 de 5.
+- La fuente esperada quedó en el puesto 1 en 19 casos y en el 2 en uno, igual que antes.
+- Ninguna respuesta se acercó al límite: el caso con más salida usó 280 tokens de 600.
+- Revisé a mano las respuestas con contenido: siguen en texto plano, tutean y empiezan
+  con la respuesta directa. `ref_pc` ahora dice qué no está en los documentos ("no indican
+  si la política de renovación aplica a computadores de escritorio") y remite a la mesa de
+  servicio, que es la regla 3 del prompt.
+- Consumo: 63.641 tokens de entrada y 2.485 de salida, USD 0,0064 + USD 0,0012 =
+  **USD 0,0076** por los 30 casos. La salida bajó un 16 % frente a la ejecución anterior
+  (2.952), lo esperable si el modelo ya no razona antes de responder.
+- Latencia de las 22 respuestas con contenido: mediana 1,5 s y máximo 3,4 s, por debajo de
+  los 10 s de SC-005. La diferencia con la ejecución anterior (1,3 s y 2,5 s) está dentro de
+  la variación de la red y la API; no la atribuyo al cambio.
 
 ## Prompt injection (RNF-04, CA-R4.3)
 
