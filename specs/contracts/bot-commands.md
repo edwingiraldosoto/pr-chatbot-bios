@@ -46,3 +46,38 @@ Advertencias: politica_x.pdf, página 3: texto que parece una instrucción al as
 
 Se dividen en partes de máximo 4096 caracteres, cortando en saltos de párrafo o de línea
 cuando sea posible; la línea de fuentes va en la última parte.
+
+## Comportamiento del bot (S6)
+
+Decisiones de implementación que el resto del contrato no fija:
+
+- **Un filtro común antes de todo** (grupo -1 de python-telegram-bot): chat privado,
+  acceso y límite por minuto se evalúan una sola vez, en el orden de arriba, para comandos,
+  texto y cualquier otro tipo de mensaje. Si un paso rechaza, ningún manejador corre.
+- **Aviso de límite una vez por ventana**: el primer mensaje que supera
+  `RATE_LIMIT_PER_MINUTE` recibe el aviso; los siguientes de esa misma ventana de 60 s se
+  descartan en silencio, para que el bot no conteste a cada mensaje de una ráfaga. Solo
+  cuentan los mensajes aceptados.
+- **Varios usuarios a la vez, un mensaje por usuario a la vez**: las actualizaciones se
+  procesan en paralelo (una pregunta lenta no frena a los demás ni a `/reindex`, CA-08.4),
+  pero los mensajes de un mismo usuario se atienden en orden, uno tras otro, para que el
+  historial no se mezcle.
+- **"Escribiendo…" mientras se responde**: se envía la acción `typing` y se renueva cada
+  4 s hasta que sale la respuesta (Telegram la apaga a los 5 s).
+- **Historial**: se guardan la pregunta original y la respuesta sin la línea de fuentes
+  solo cuando hubo respuesta. Las preguntas no encontradas van a `unanswered` (con la
+  reformulada si difiere de la original) y no al historial, para no reformular los
+  seguimientos sobre una respuesta vacía. Con `HISTORY_LENGTH: 0` no se guarda nada.
+- **`/reindex`** corre en segundo plano: responde "Reindexación iniciada…" de inmediato y
+  el resumen llega al terminar. `/reindex algo` (argumento desconocido) responde el uso.
+  Las advertencias del resumen salen de los documentos nuevos o actualizados.
+- **Comando desconocido**: "No conozco ese comando. Usa /help para ver los disponibles."
+- **Mensajes editados**: se ignoran; solo se responden mensajes nuevos.
+- **Arranque**: la indexación inicial termina antes de empezar a recibir mensajes. Los
+  mensajes enviados mientras el bot estaba apagado se responden al arrancar.
+
+| Situación | Mensaje |
+|---|---|
+| `/reindex` con argumento desconocido | "Uso: /reindex (cambios) o /reindex full (reconstrucción completa)." |
+| La reindexación falla | "La reindexación falló: {motivo}. Revisa el log del bot." |
+| Comando desconocido | "No conozco ese comando. Usa /help para ver los disponibles." |
