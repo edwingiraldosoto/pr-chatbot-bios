@@ -158,6 +158,15 @@ Cambio pedido por el autor el 2026-11-06 para la evaluación (CA-07.5, RNF-08, p
 
 ---
 
+## Fase S11: Ajustes posteriores a la verificación
+
+Tarea agregada después de S10 por un error visto en la prueba real en Telegram: la pregunta
+"Vacaciones, extras, equipo" llegó cortada a mitad de palabra.
+
+- [x] T-54 Respuesta cortada por `LLM_MAX_TOKENS`: `thinking: disabled` en Anthropic, marca `truncated` en los tres adaptadores, recorte a la última oración completa con aviso que no pasa al historial; repetir la evaluación — `src/mesa_ayuda/llm/`, `src/mesa_ayuda/answering.py`, `config.yaml`, `docs/EVALUACION.md` — RF-03, RNF-05 (CA-R5.8)
+
+---
+
 ## Dependencias y orden de ejecución
 
 ### Dependencias entre fases
@@ -165,7 +174,7 @@ Cambio pedido por el autor el 2026-11-06 para la evaluación (CA-07.5, RNF-08, p
 - **S2** no depende de nada. **S3** y **S4** dependen de S2 y bloquean todas las historias.
 - **S5** depende de S4. **S6** depende de S5. **S7** depende de S6.
 - **S8** depende de S6 (y de S7 para los casos de injection desde documentos).
-- **S9** se puede adelantar en paralelo; se cierra después de S8. **S10** es la última.
+- **S9** se puede adelantar en paralelo; se cierra después de S8. **S10** es la última de la entrega original; **S11** agrega T-54 después de la verificación.
 
 ### Dependencias entre historias
 
@@ -238,13 +247,14 @@ Estado al momento de la entrega (se actualiza al cerrar cada fase).
 | T-36 | RNF-02 | S7 | Terminada | `d1d8c77` |
 | T-37 | RF-14 | S7 | Terminada | `7f4beea` |
 | T-38 | SC-001–SC-003 | S8 | Terminada | `bb8d5a5`, `b4afa16` |
-| T-39 | RF-03–RF-05, RF-12, RNF-04 | S8 | Terminada salvo la prueba con lector de pantalla (la hace el autor) | `550c71c`, `39ec3d5`, este commit |
+| T-39 | RF-03–RF-05, RF-12, RNF-04 | S8 | Terminada salvo la prueba con lector de pantalla (la hace el autor) | `550c71c`, `39ec3d5`, `94f7b2f`, `bdc74dd`, `52f3800` |
 | T-40 | RNF-02 | S9 | Terminada | `e235e8b` |
 | T-41 | Enunciado §6.2 | S9 | Terminada | `8faea03` |
 | T-42 | Enunciado §6.3 | S9 | Terminada | `6c94b4a` |
 | T-43 | Enunciado §6.6 | S9 | Terminada | `cf81c5b` |
-| T-44 | Enunciado §6.4 | S9 | Terminada | este commit |
-| T-45 | RNF-02, RNF-03 | S10 | Terminada (resultados en `docs/USO_IA.md`, 2026-11-07) | este commit |
+| T-44 | Enunciado §6.4 | S9 | Terminada | `0be0b6b` |
+| T-45 | RNF-02, RNF-03 | S10 | Terminada (resultados en `docs/USO_IA.md`, 2026-11-07) | `c80f47e` |
+| T-54 | RF-03, RNF-05 | S11 | Terminada | `4333ac2` (sin la referencia a la tarea en el mensaje), `c7070b5`, `fcc8bae`, y los commits de evaluación y documentación que llevan `[T-54]` |
 
 ### Cobertura de requisitos
 
@@ -252,7 +262,7 @@ Estado al momento de la entrega (se actualiza al cerrar cada fase).
 |---|---|
 | RF-01 | T-06, T-07, T-08, T-09 |
 | RF-02 | T-10, T-12, T-13, T-15 |
-| RF-03 | T-05, T-18, T-19, T-25, T-30 |
+| RF-03 | T-05, T-18, T-19, T-25, T-30, T-54 |
 | RF-04 | T-05, T-18, T-25 |
 | RF-05 | T-24, T-26 |
 | RF-06 | T-29, T-50 |
@@ -268,7 +278,7 @@ Estado al momento de la entrega (se actualiza al cerrar cada fase).
 | RNF-02 | T-32, T-36, T-40, T-45 |
 | RNF-03 | T-04, T-45 |
 | RNF-04 | T-05, T-19, T-39 |
-| RNF-05 | T-20, T-27, T-28, T-30, T-49 |
+| RNF-05 | T-20, T-27, T-28, T-30, T-49, T-54 |
 | RNF-08 | T-51, T-53 |
 | RNF-06 | T-04 |
 | RNF-07 | T-01 y las pruebas de cada tarea |
