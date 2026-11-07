@@ -71,6 +71,7 @@ YAML_PATHS: dict[str, tuple[str, str]] = {
     "allowed_user_ids": ("access", "allowed_user_ids"),
     "admin_user_ids": ("access", "admin_user_ids"),
     "rate_limit_per_minute": ("access", "rate_limit_per_minute"),
+    "duplicate_window_seconds": ("access", "duplicate_window_seconds"),
     "log_level": ("logging", "level"),
     "log_questions": ("logging", "log_questions"),
     "data_dir": ("storage", "data_dir"),
@@ -245,6 +246,7 @@ class Settings(BaseSettings):
     allowed_user_ids: UserIds = Field(default_factory=list)
     admin_user_ids: UserIds = Field(default_factory=list)
     rate_limit_per_minute: int = Field(10, ge=1)
+    duplicate_window_seconds: float = Field(5.0, ge=0.0, le=60.0)
 
     # --- Logs y almacenamiento ---
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"

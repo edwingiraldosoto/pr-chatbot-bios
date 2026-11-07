@@ -1,7 +1,7 @@
 """Guardas que se evalúan antes de procesar un mensaje (RF-07, RNF-05).
 
-Orden (``specs/contracts/bot-commands.md``): chat privado → acceso → límite por minuto →
-validación del texto. No dependen de Telegram, para probarlas sin red.
+Orden (``specs/contracts/bot-commands.md``): chat privado → acceso → copias repetidas →
+límite por minuto → validación del texto. No dependen de Telegram, para probarlas sin red.
 """
 
 from __future__ import annotations
@@ -95,3 +95,40 @@ def clean_question(text: str | None) -> str | None:
         return None
     cleaned = text.strip()
     return cleaned or None
+
+
+class DuplicateFilter:
+    """Descarta copias del mismo mensaje enviadas seguidas por el mismo usuario (CA-R5.7).
+
+    Algunos clientes de Telegram reenvían un mensaje varias veces (red inestable, Enter
+    repetido). Se compara cada texto con el último aceptado de ese usuario, sin espacios
+    sobrantes ni diferencias de mayúsculas; si es igual y llegó dentro de la ventana, es una
+    copia. La ventana cuenta desde la primera copia, así que una ráfaga no la alarga.
+
+    Args:
+        window_seconds: ``DUPLICATE_WINDOW_SECONDS``; 0 desactiva el filtro.
+        clock: Reloj monótono (inyectable en las pruebas).
+    """
+
+    def __init__(
+        self, window_seconds: float, *, clock: Callable[[], float] = time.monotonic
+    ) -> None:
+        if window_seconds < 0:
+            raise ValueError("window_seconds no puede ser negativo")
+        self.window_seconds = window_seconds
+        self._clock = clock
+        self._last: dict[int, tuple[str, float]] = {}
+
+    def is_duplicate(self, user_id: int, text: str | None) -> bool:
+        """Si el texto es una copia del último mensaje aceptado del usuario."""
+        if self.window_seconds == 0 or text is None:
+            return False
+        key = " ".join(text.split()).casefold()
+        if not key:
+            return False
+        now = self._clock()
+        last = self._last.get(user_id)
+        if last is not None and last[0] == key and now - last[1] < self.window_seconds:
+            return True
+        self._last[user_id] = (key, now)
+        return False

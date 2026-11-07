@@ -3,9 +3,9 @@
 El orden de evaluación es el de ``specs/contracts/bot-commands.md``:
 
 1. :meth:`BotHandlers.gate` corre antes que todo (grupo -1). Ignora lo que no sea un
-   mensaje nuevo en un chat privado, niega el acceso a quien no está autorizado y aplica
-   el límite por minuto. Si rechaza, lanza ``ApplicationHandlerStop`` y ningún otro
-   manejador corre.
+   mensaje nuevo en un chat privado, niega el acceso a quien no está autorizado,
+   descarta las copias repetidas de un mensaje y aplica el límite por minuto. Si
+   rechaza, lanza ``ApplicationHandlerStop`` y ningún otro manejador corre.
 2. En el grupo 0, el primer manejador que coincide: comandos conocidos, comando
    desconocido, texto (pregunta) u otro tipo de mensaje.
 
@@ -39,6 +39,7 @@ from mesa_ayuda.bot import messages
 from mesa_ayuda.bot.messages import split_message
 from mesa_ayuda.guards import (
     AccessControl,
+    DuplicateFilter,
     RateDecision,
     RateLimiter,
     clean_question,
@@ -123,6 +124,7 @@ class BotHandlers:
             ``message_handled`` (CA-R6.2). Con ``LOG_LEVEL=DEBUG`` sale siempre, en un
             evento ``question_text`` aparte.
         typing_interval: Cada cuánto se renueva "escribiendo…".
+        duplicates: Filtro de copias repetidas; sin él no se filtran (CA-R5.7).
     """
 
     def __init__(
@@ -135,6 +137,7 @@ class BotHandlers:
         answers: Answerer,
         log_questions: bool = False,
         typing_interval: float = TYPING_INTERVAL_SECONDS,
+        duplicates: DuplicateFilter | None = None,
     ) -> None:
         self.access = access
         self.limiter = limiter
@@ -143,6 +146,7 @@ class BotHandlers:
         self.answers = answers
         self.log_questions = log_questions
         self.typing_interval = typing_interval
+        self.duplicates = duplicates or DuplicateFilter(0)
         self._user_locks: dict[int, asyncio.Lock] = {}
 
     def register(self, application: AnyApplication) -> None:
@@ -166,7 +170,7 @@ class BotHandlers:
     # --- Filtro común (grupo -1) ------------------------------------------------------------
 
     async def gate(self, update: Update, context: Context) -> None:
-        """Chat privado → acceso → límite por minuto (CA-07.2, CA-07.4, CA-R5.4)."""
+        """Chat privado → acceso → copias → límite (CA-07.2, CA-07.4, CA-R5.7, CA-R5.4)."""
         message, user, chat = update.message, update.effective_user, update.effective_chat
         if message is None or user is None or chat is None:
             raise ApplicationHandlerStop  # ediciones, estados del chat y demás: se ignoran
@@ -178,6 +182,9 @@ class BotHandlers:
             log.warning("message_handled", outcome="denied")
             await reply(message, messages.access_denied(user.id))
             raise ApplicationHandlerStop
+        if self.duplicates.is_duplicate(user.id, message.text):
+            log.info("message_handled", outcome="duplicate")
+            raise ApplicationHandlerStop  # no responde ni cuenta para el límite
         decision = self.limiter.check(user.id)
         if decision is not RateDecision.ALLOW:
             log.warning("message_handled", outcome="rate_limited", warned=decision.value)

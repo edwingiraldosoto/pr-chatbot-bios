@@ -27,7 +27,7 @@ from mesa_ayuda.answering import AnswerService
 from mesa_ayuda.bot.handlers import AnyApplication, BotHandlers
 from mesa_ayuda.config import ConfigError, Settings, load_settings
 from mesa_ayuda.embeddings import Embedder, EmbeddingModelError, LocalEmbedder
-from mesa_ayuda.guards import AccessControl, RateLimiter
+from mesa_ayuda.guards import AccessControl, DuplicateFilter, RateLimiter
 from mesa_ayuda.indexing.indexer import Indexer
 from mesa_ayuda.llm.base import LLMProvider, create_provider
 from mesa_ayuda.logging_setup import configure_logging, get_logger
@@ -102,6 +102,7 @@ def build(
         indexer=indexer,
         answers=answers,
         log_questions=settings.log_questions,
+        duplicates=DuplicateFilter(settings.duplicate_window_seconds),
     )
     application: AnyApplication = (
         Application.builder()

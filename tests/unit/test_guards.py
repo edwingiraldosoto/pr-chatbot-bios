@@ -6,6 +6,7 @@ import pytest
 
 from mesa_ayuda.guards import (
     AccessControl,
+    DuplicateFilter,
     RateDecision,
     RateLimiter,
     clean_question,
@@ -106,3 +107,58 @@ def test_limit_must_be_positive() -> None:
 def test_clean_question(text: str | None, expected: str | None) -> None:
     # CA-R5.3: texto vacío se trata igual que un mensaje sin texto.
     assert clean_question(text) == expected
+
+
+# --- Copias repetidas (T-49; CA-R5.7) -------------------------------------------------------
+
+
+def test_same_text_within_the_window_is_a_duplicate() -> None:
+    clock = Clock()
+    duplicates = DuplicateFilter(5, clock=clock)
+
+    assert duplicates.is_duplicate(1, "hola") is False
+    clock.now += 0.1
+    assert duplicates.is_duplicate(1, "  HOLA ") is True  # sin espacios ni mayúsculas
+    assert duplicates.is_duplicate(1, "Hola\n") is True
+
+
+def test_window_counts_from_the_first_copy() -> None:
+    # Una ráfaga larga no alarga la ventana: a los 5 s de la primera, se acepta de nuevo.
+    clock = Clock()
+    duplicates = DuplicateFilter(5, clock=clock)
+    duplicates.is_duplicate(1, "hola")
+    for _ in range(4):
+        clock.now += 1
+        assert duplicates.is_duplicate(1, "hola") is True
+
+    clock.now += 1
+    assert duplicates.is_duplicate(1, "hola") is False
+
+
+def test_different_text_or_user_is_not_a_duplicate() -> None:
+    duplicates = DuplicateFilter(5, clock=Clock())
+    duplicates.is_duplicate(1, "¿Cuántos días de vacaciones?")
+
+    assert duplicates.is_duplicate(1, "¿Y se acumulan?") is False
+    assert duplicates.is_duplicate(2, "¿Y se acumulan?") is False
+    # Solo se compara con el último: volver a la primera pregunta ya no es una copia.
+    assert duplicates.is_duplicate(1, "¿Cuántos días de vacaciones?") is False
+
+
+@pytest.mark.parametrize("text", [None, "", "   "])
+def test_messages_without_text_are_never_duplicates(text: str | None) -> None:
+    duplicates = DuplicateFilter(5, clock=Clock())
+
+    assert duplicates.is_duplicate(1, text) is False
+    assert duplicates.is_duplicate(1, text) is False
+
+
+def test_zero_window_disables_the_filter() -> None:
+    duplicates = DuplicateFilter(0, clock=Clock())
+
+    assert [duplicates.is_duplicate(1, "hola") for _ in range(3)] == [False, False, False]
+
+
+def test_negative_window_is_rejected() -> None:
+    with pytest.raises(ValueError, match="negativo"):
+        DuplicateFilter(-1)

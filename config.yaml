@@ -108,6 +108,10 @@ access:
   admin_user_ids: []
   # RATE_LIMIT_PER_MINUTE: mensajes máximos por usuario por minuto.
   rate_limit_per_minute: 10
+  # DUPLICATE_WINDOW_SECONDS: el mismo texto repetido por el mismo usuario dentro de
+  # estos segundos se responde una sola vez (copias que reenvía el cliente de
+  # Telegram o un Enter repetido). 0 = desactivado.
+  duplicate_window_seconds: 5
 
 logging:
   # LOG_LEVEL: DEBUG | INFO | WARNING | ERROR.

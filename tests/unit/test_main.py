@@ -57,6 +57,15 @@ def fakes(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
     monkeypatch.setattr(entry, "LocalEmbedder", lambda *args, **kwargs: FakeEmbedder())
     monkeypatch.setattr(entry, "create_provider", lambda settings: recorded["provider"])
 
+    real_build = entry.build
+
+    def build(settings: Any, **kwargs: Any) -> entry.Runtime:
+        runtime = real_build(settings, **kwargs)
+        recorded["handlers"] = runtime.handlers
+        return runtime
+
+    monkeypatch.setattr(entry, "build", build)
+
     def fake_polling(self: Application[Any, Any, Any, Any, Any, Any], **kwargs: Any) -> None:
         recorded["polling"] = kwargs
         error = recorded.get("polling_error")
@@ -96,6 +105,7 @@ def test_starts_after_the_initial_index_and_polls_only_messages(
     starting = next(e for e in events(out) if e["event"] == "bot_starting")
     assert (starting["provider"], starting["documents"], starting["admins"]) == ("anthropic", 1, 1)
     assert TOKEN not in out  # RNF-03
+    assert fakes["handlers"].duplicates.window_seconds == 5  # valor de config por defecto
     assert (workdir / "data" / "bot.sqlite3").is_file()
 
 

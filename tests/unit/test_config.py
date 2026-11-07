@@ -270,3 +270,17 @@ def test_startup_warns_when_nobody_has_access(
 
     assert any("nadie podrá usar el bot" in warning for warning in warnings)
     assert any("vacía" in warning for warning in warnings)
+
+
+def test_duplicate_window_default_override_and_range(
+    secrets_env: dict[str, str], config_dir: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # CA-R5.7: 5 s por defecto, 0 lo desactiva, más de 60 es un error que nombra la variable.
+    assert load_settings(config_dir / "config.yaml", env_file=None).duplicate_window_seconds == 5
+
+    monkeypatch.setenv("DUPLICATE_WINDOW_SECONDS", "0")
+    assert load_settings(config_dir / "config.yaml", env_file=None).duplicate_window_seconds == 0
+
+    monkeypatch.setenv("DUPLICATE_WINDOW_SECONDS", "120")
+    with pytest.raises(ConfigError, match="DUPLICATE_WINDOW_SECONDS"):
+        load_settings(config_dir / "config.yaml", env_file=None)
