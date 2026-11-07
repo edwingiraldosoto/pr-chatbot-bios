@@ -265,3 +265,26 @@ hicieron fallar al menos una prueba):
   manifest manipulado (`../secreto.txt`) confirma que no se envían archivos fuera de la
   carpeta. Una mutación (quitar la revisión de estado `indexed`) sobrevivió al principio
   porque el PDF ilegible de la prueba no existía en disco; se corrigió la prueba.
+
+### 2026-11-07 — Evaluación y calibración (S8: T-38 y T-39)
+
+**Criterio aplicado**: la calificación automática del script dio 30/30 en la primera
+ejecución, pero revisé las 30 respuestas a mano y encontré tres cosas que no detectaba:
+- Un error del post-proceso ("p. m.." al quitar un marcador).
+- Una respuesta que trataba de usted.
+- El conjunto no cubría la reformulación que inventaba en la prueba real.
+
+Agregué esos casos antes de corregir, para medir el antes y el después.
+
+**Medición antes de cambiar el prompt**: como el modelo no es determinista, una sola
+ejecución no mostraba el problema de la reformulación. Repetí 8 preguntas reales 5 veces con
+cada prompt. La primera métrica automática exageraba (18 de 40), porque contaba como
+inventadas palabras que venían de las respuestas del asistente. La corregí y conté a mano:
+13 de 40 con el prompt anterior y 0 de 40 con el nuevo.
+
+**Calibración que no cambió nada**: el umbral (0,80) y el fragmento (800/150) se probaron
+contra alternativas y se mantuvieron, con los datos en `docs/EVALUACION.md`. Subir el
+umbral ahorraba centavos a cambio de arriesgar respuestas que sí existen.
+
+**Pendiente**: la prueba con lector de pantalla (TalkBack o VoiceOver) la hace el autor en
+su teléfono.

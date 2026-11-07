@@ -137,8 +137,8 @@ Cambio pedido por el autor el 2026-11-06 para la evaluación (CA-07.5, RNF-08, p
 
 ## Fase S8: Evaluación y calibración
 
-- [ ] T-38 Conjunto de evaluación (12+ preguntas: 3+ fuera de alcance, 2+ seguimientos, 2 de injection) y script reproducible con aciertos de recuperación — `scripts/evaluate.py`, `tests/eval/questions.yaml` — SC-001–SC-003
-- [ ] T-39 Ejecutar la evaluación, calibrar umbral, tamaño de fragmento y prompt; prueba con lector de pantalla; registrar cambios en spec y plan — `docs/EVALUACION.md`, `specs/spec.md`, `specs/plan.md` — RF-03, RF-04, RF-05, RF-12, RNF-04
+- [x] T-38 Conjunto de evaluación (12+ preguntas: 3+ fuera de alcance, 2+ seguimientos, 2 de injection) y script reproducible con aciertos de recuperación — `scripts/evaluate.py`, `tests/eval/questions.yaml` — SC-001–SC-003
+- [x] T-39 Ejecutar la evaluación, calibrar umbral, tamaño de fragmento y prompt; prueba con lector de pantalla; registrar cambios en spec y plan — `docs/EVALUACION.md`, `specs/spec.md`, `specs/plan.md` — RF-03, RF-04, RF-05, RF-12, RNF-04
 
 ---
 
@@ -237,8 +237,8 @@ Estado al momento de la entrega (se actualiza al cerrar cada fase).
 | T-35 | RF-11 | S7 | Terminada | `eda1c11` |
 | T-36 | RNF-02 | S7 | Terminada | `d1d8c77` |
 | T-37 | RF-14 | S7 | Terminada | `7f4beea` |
-| T-38 | SC-001–SC-003 | S8 | Pendiente | — |
-| T-39 | RF-03–RF-05, RF-12, RNF-04 | S8 | Pendiente | — |
+| T-38 | SC-001–SC-003 | S8 | Terminada | `bb8d5a5`, `b4afa16` |
+| T-39 | RF-03–RF-05, RF-12, RNF-04 | S8 | Terminada salvo la prueba con lector de pantalla (la hace el autor) | `550c71c`, `39ec3d5`, este commit |
 | T-40 | RNF-02 | S9 | Pendiente | — |
 | T-41 | Enunciado §6.2 | S9 | Pendiente | — |
 | T-42 | Enunciado §6.3 | S9 | Pendiente | — |
