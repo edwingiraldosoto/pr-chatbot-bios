@@ -75,6 +75,7 @@ Decisiones de implementación que el resto del contrato no fija:
 - **`/reindex`** corre en segundo plano: responde "Reindexación iniciada…" de inmediato y
   el resumen llega al terminar. `/reindex algo` (argumento desconocido) responde el uso.
   Las advertencias del resumen salen de los documentos nuevos o actualizados.
+- **Botón de descarga** (RF-14, `bot.source_download: true`): la última parte de una respuesta con fuentes lleva un botón "Descargar <documento>" por documento citado (sin repetir). El dato del botón es `doc:<id>`, donde `<id>` son los primeros 16 caracteres del SHA-256 de la ruta relativa: no es una ruta. Al tocarlo se busca ese id entre los documentos `indexed` del momento; si ya no está, o si la ruta resuelta queda fuera de `KNOWLEDGE_BASE_PATH`, se responde "Ese documento ya no está disponible." El botón pasa por el mismo filtro común (chat privado, acceso, límite por minuto). Si Telegram rechaza el archivo (más de 50 MB), se avisa: "No pude enviar el documento; pídeselo a la mesa de ayuda."
 - **Comando desconocido**: "No conozco ese comando. Usa /help para ver los disponibles."
 - **Mensajes editados**: se ignoran; solo se responden mensajes nuevos.
 - **Invitaciones** (CA-07.5): el código se compara en tiempo constante y nunca se escribe en el log; se guarda una huella (SHA-256) del código con que entró cada invitado, así cambiar `INVITE_CODE` los deja a todos fuera sin borrar nada. Un invitado es un usuario normal: no administra.
