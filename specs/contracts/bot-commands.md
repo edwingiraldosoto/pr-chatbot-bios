@@ -74,6 +74,8 @@ Decisiones de implementación que el resto del contrato no fija:
   Las advertencias del resumen salen de los documentos nuevos o actualizados.
 - **Comando desconocido**: "No conozco ese comando. Usa /help para ver los disponibles."
 - **Mensajes editados**: se ignoran; solo se responden mensajes nuevos.
+- **Saludos, agradecimientos y despedidas** (CA-06.5): se reconocen solo si el mensaje completo es una de esas fórmulas, sin tildes, signos ni letras repetidas ("Holaaa!!", "buenas tardes", "muchas gracias", "chao"). Si trae algo más, es una pregunta. Se responden con un texto fijo, sin modelo ni historial, y se registran como `outcome=small_talk`.
+- **`/start`**: Telegram lo envía solo cuando alguien abre el bot por primera vez (botón "Iniciar"); después no hace falta usarlo, pero sigue disponible.
 - **Copias del mismo mensaje**: el texto se compara sin espacios sobrantes ni diferencias de mayúsculas, por usuario, contra el último mensaje aceptado de ese usuario. La ventana cuenta desde la primera copia, así que una ráfaga larga no la alarga sin fin. Las copias descartadas no cuentan para el límite por minuto; se registran como `outcome=duplicate`. Aplica también a los comandos (diez `/start` seguidos reciben una bienvenida). Los mensajes sin texto (fotos, audios) no se comparan.
 - **Arranque**: la indexación inicial termina antes de empezar a recibir mensajes. Los
   mensajes enviados mientras el bot estaba apagado se responden al arrancar.
@@ -83,3 +85,6 @@ Decisiones de implementación que el resto del contrato no fija:
 | `/reindex` con argumento desconocido | "Uso: /reindex (cambios) o /reindex full (reconstrucción completa)." |
 | La reindexación falla | "La reindexación falló: {motivo}. Revisa el log del bot." |
 | Comando desconocido | "No conozco ese comando. Usa /help para ver los disponibles." |
+| Saludo (CA-06.5) | "Hola, {nombre}. Con gusto te ayudo con las políticas, procedimientos y guías de la empresa. Escríbeme tu pregunta, por ejemplo: ¿Cuántos días de vacaciones tengo? Usa /help para ver cómo preguntar y los comandos." |
+| Agradecimiento | "Con gusto. Si tienes otra pregunta, aquí estoy." |
+| Despedida | "Hasta pronto. Cuando necesites algo, escríbeme." |

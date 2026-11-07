@@ -114,6 +114,7 @@ Cambio pedido por el autor el 2026-11-06 (CA-R1.6, plan 1.4):
 Cambio pedido por el autor el 2026-11-06 tras la prueba real (CA-R5.7, plan 1.6):
 
 - [ ] T-49 [US3] Filtro de mensajes repetidos por usuario con `DUPLICATE_WINDOW_SECONDS` — `src/mesa_ayuda/guards.py`, `src/mesa_ayuda/bot/handlers.py`, `src/mesa_ayuda/config.py`, `config.yaml`, `.env.example`, `tests/unit/test_guards.py`, `tests/unit/test_handlers.py` — RNF-05 (CA-R5.7)
+- [ ] T-50 [US5] Respuesta cordial a saludos, agradecimientos y despedidas — `src/mesa_ayuda/bot/small_talk.py`, `src/mesa_ayuda/bot/messages.py`, `src/mesa_ayuda/bot/handlers.py`, `tests/unit/test_small_talk.py`, `tests/unit/test_handlers.py` — RF-06 (CA-06.5)
 
 **Punto de control**: obligatorios RF-01 a RF-07 y deseables RF-08 a RF-10 funcionando en Telegram.
 
@@ -222,6 +223,7 @@ Estado al momento de la entrega (se actualiza al cerrar cada fase).
 | T-32 | RNF-02 | S6 | Terminada | `10eb774` |
 | T-33 | RF-10 | S6 | Terminada | `151b2f8`, `cea464d` |
 | T-49 | RNF-05 | S6 | Pendiente | — |
+| T-50 | RF-06 | S6 | Pendiente | — |
 | T-34 | RF-13 | S7 | Pendiente | — |
 | T-35 | RF-11 | S7 | Pendiente | — |
 | T-36 | RNF-02 | S7 | Pendiente | — |
@@ -244,7 +246,7 @@ Estado al momento de la entrega (se actualiza al cerrar cada fase).
 | RF-03 | T-05, T-18, T-19, T-25, T-30 |
 | RF-04 | T-05, T-18, T-25 |
 | RF-05 | T-24, T-26 |
-| RF-06 | T-29 |
+| RF-06 | T-29, T-50 |
 | RF-07 | T-27 |
 | RF-08 | T-17, T-31 |
 | RF-09 | T-14, T-15, T-16 |

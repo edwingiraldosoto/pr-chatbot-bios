@@ -299,6 +299,7 @@ El sistema MUST mantener un historial por usuario para entender preguntas de seg
 - **CA-06.2** `/help` explica cómo preguntar y lista los comandos del rol del usuario (los de administrador solo se muestran a administradores).
 - **CA-06.3** `/reset` borra el historial de quien lo envía y lo confirma.
 - **CA-06.4** `/fuentes` lista los documentos indexados actualmente (nombre y número de fragmentos), sin incluir eliminados ni ilegibles.
+- **CA-06.5** Un mensaje que solo saluda ("hola", "buenos días"), agradece ("gracias") o se despide ("chao") recibe una respuesta cordial; el saludo invita a preguntar y menciona `/help`. No se busca en los documentos, no llama al modelo y no cuenta como pregunta sin respuesta. Un saludo con pregunta ("hola, ¿cuántos días de vacaciones tengo?") se responde como pregunta.
 
 #### RF-07 — Control de acceso (O)
 
