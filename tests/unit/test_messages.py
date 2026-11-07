@@ -51,7 +51,12 @@ def test_user_texts_are_plain_and_accessible() -> None:
     ]
     texts = [
         text.format(
-            user_id=1, reason="motivo", hello="Hola", link="https://t.me/bot?start=codigo", n="50"
+            user_id=1,
+            reason="motivo",
+            hello="Hola",
+            link="https://t.me/bot?start=codigo",
+            n="50",
+            time="03:00",
         )
         for text in templates
     ]

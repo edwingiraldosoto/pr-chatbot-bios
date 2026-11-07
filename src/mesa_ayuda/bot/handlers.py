@@ -20,6 +20,7 @@ import time
 from collections.abc import AsyncIterator, Sequence
 from contextlib import asynccontextmanager, suppress
 from datetime import UTC, datetime, tzinfo
+from datetime import time as day_time
 from typing import Any, Protocol, cast
 
 from telegram import Bot, Message, Update
@@ -132,6 +133,8 @@ class BotHandlers:
         duplicates: Filtro de copias repetidas; sin él no se filtran (CA-R5.7).
         invite_code: ``INVITE_CODE``; sin él no hay invitaciones (CA-07.5).
         timezone: Zona horaria del día de los topes y de ``/invitados``.
+        notify_admins: ``REINDEX_NOTIFY_ADMINS``: avisar a los administradores el
+            resultado de la reindexación programada si hubo cambios o errores.
         daily_questions_per_user: Tope diario por usuario (CA-R8.1); ``None`` = sin tope.
         daily_questions_total: Tope diario de todos (CA-R8.2); ``None`` = sin tope.
         max_question_chars: Largo máximo de una pregunta (CA-R8.3); ``None`` = sin
@@ -154,6 +157,7 @@ class BotHandlers:
         daily_questions_per_user: int | None = None,
         daily_questions_total: int | None = None,
         max_question_chars: int | None = None,
+        notify_admins: bool = True,
     ) -> None:
         self.access = access
         self.limiter = limiter
@@ -169,6 +173,7 @@ class BotHandlers:
         self.daily_questions_per_user = daily_questions_per_user
         self.daily_questions_total = daily_questions_total
         self.max_question_chars = max_question_chars
+        self.notify_admins = notify_admins
         self._user_locks: dict[int, asyncio.Lock] = {}
 
     def register(self, application: AnyApplication) -> None:
@@ -298,15 +303,64 @@ class BotHandlers:
             log.exception("reindex_failed", full=full)
             await reply(message, messages.reindex_failed(str(error) or type(error).__name__))
             return
+        await reply(message, messages.reindex_summary(summary, self._new_warnings(summary)))
+        log.info("message_handled", outcome="command", command="reindex", full=full)
+
+    def _new_warnings(self, summary: ReindexSummary) -> list[tuple[str, str]]:
+        """Advertencias de los documentos nuevos o actualizados en esta reindexación."""
         changed = {*summary.added, *summary.updated}
-        warnings = [
+        return [
             (info.source, warning)
             for info in self.indexer.sources()
             if info.source in changed and info.status == "indexed"
             for warning in info.warnings
         ]
-        await reply(message, messages.reindex_summary(summary, warnings))
-        log.info("message_handled", outcome="command", command="reindex", full=full)
+
+    # --- Reindexación programada (RF-11) ----------------------------------------------------
+
+    def schedule_daily_reindex(self, application: AnyApplication, at: day_time) -> None:
+        """Programa la reindexación incremental diaria a la hora ``at`` (con su zona)."""
+        if application.job_queue is None:  # pragma: no cover - el extra job-queue es dependencia
+            raise RuntimeError("falta python-telegram-bot[job-queue]")
+        application.job_queue.run_daily(self.scheduled_reindex, time=at, name="reindex_diario")
+        log.info("reindex_scheduled", time=at.strftime("%H:%M"), timezone=str(at.tzinfo))
+
+    async def scheduled_reindex(self, context: Context) -> None:
+        """Reindexación diaria: incremental, una a la vez y con aviso solo si hay novedades.
+
+        CA-11.1 a CA-11.3. Si ya hay una en curso (por ejemplo un ``/reindex``), se omite.
+        """
+        try:
+            summary = await self.indexer.reindex_async()
+        except ReindexInProgressError:
+            log.info("scheduled_reindex_skipped", reason="ya hay una reindexación en curso")
+            return
+        except Exception as error:
+            log.exception("scheduled_reindex_failed")
+            await self._notify_admins(
+                context.bot, messages.reindex_failed(str(error) or type(error).__name__)
+            )
+            return
+        news = summary.has_changes or summary.has_errors or bool(summary.quarantined)
+        log.info("scheduled_reindex_finished", notified=news and self.notify_admins)
+        if news:
+            stamp = datetime.now(self.timezone).strftime("%H:%M")
+            text = (
+                messages.SCHEDULED_REINDEX.format(time=stamp)
+                + "\n"
+                + messages.reindex_summary(summary, self._new_warnings(summary))
+            )
+            await self._notify_admins(context.bot, text)
+
+    async def _notify_admins(self, bot: Bot, text: str) -> None:
+        if not self.notify_admins:
+            return
+        for admin in self.access.admins:
+            try:
+                for part in split_message(text):
+                    await bot.send_message(admin, part)
+            except TelegramError as error:  # p. ej. el admin nunca le escribió al bot
+                log.warning("admin_notify_failed", admin=admin, error=str(error))
 
     # --- Invitaciones (CA-07.5) -------------------------------------------------------------
 

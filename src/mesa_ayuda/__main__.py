@@ -110,6 +110,7 @@ def build(
         daily_questions_per_user=settings.daily_questions_per_user,
         daily_questions_total=settings.daily_questions_total,
         max_question_chars=settings.max_question_chars,
+        notify_admins=settings.reindex_notify_admins,
     )
     application: AnyApplication = (
         Application.builder()
@@ -118,6 +119,8 @@ def build(
         .build()
     )
     handlers.register(application)
+    if settings.schedule_time is not None:  # RF-11
+        handlers.schedule_daily_reindex(application, settings.schedule_time)
     return Runtime(settings, indexer, storage, handlers, application)
 
 

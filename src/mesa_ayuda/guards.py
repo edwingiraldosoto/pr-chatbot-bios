@@ -39,6 +39,11 @@ class AccessControl:
         """Si el usuario puede usar ``/reindex``."""
         return user_id in self._admins
 
+    @property
+    def admins(self) -> list[int]:
+        """IDs de los administradores, ordenados (para los avisos de RF-11)."""
+        return sorted(self._admins)
+
 
 class RateDecision(StrEnum):
     """Resultado de :meth:`RateLimiter.check`."""

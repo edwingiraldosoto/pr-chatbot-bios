@@ -88,6 +88,7 @@ REINDEX_FULL_STARTED = "Reconstrucción completa del índice iniciada…"
 REINDEX_IN_PROGRESS = "Ya hay una reindexación en curso."
 REINDEX_USAGE = "Uso: /reindex (cambios) o /reindex full (reconstrucción completa)."
 REINDEX_FAILED = "La reindexación falló: {reason}. Revisa el log del bot."
+SCHEDULED_REINDEX = "Reindexación programada de las {time}."
 
 INVITE_DISABLED = (
     "Las invitaciones están desactivadas. Define INVITE_CODE en .env y reinicia el bot."
