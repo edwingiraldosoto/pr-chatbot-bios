@@ -201,7 +201,7 @@ idioma.
 - No hace falta razonamiento profundo para responder desde un fragmento. Lo que importa es
   obedecer el formato, y Haiku lo hizo en todos los casos de la evaluación.
 - El costo es de unos USD 0,00026 por pregunta (cálculo en CRITERIO_TECNICO).
-- La mediana de respuesta fue de 1,1 s.
+- La mediana de respuesta estuvo entre 1,1 y 1,3 s en las ejecuciones de la evaluación.
 - **Ajustes encontrados al probar contra la API real (T-21, plan 1.3):**
   - El SDK 2.6 ya no acepta `temperature`, así que no se envía.
   - Haiku 5.5 razona por defecto y esos tokens cuentan en `LLM_MAX_TOKENS`. Con
@@ -462,7 +462,7 @@ emojis, y escribir los pasos como "Paso 1:".
 - Es lo que mejor leen TalkBack y VoiceOver.
 
 **Consecuencias.** Las respuestas no tienen negritas ni listas con formato. En la
-evaluación, ninguna de las 22 respuestas trajo Markdown.
+evaluación, ninguna respuesta trajo Markdown.
 
 ## D-13 — Acceso con falla cerrada, invitación por enlace y topes de costo
 

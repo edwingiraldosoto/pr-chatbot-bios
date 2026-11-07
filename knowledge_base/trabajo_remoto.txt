@@ -1,5 +1,5 @@
 LINEAMIENTOS DE TRABAJO REMOTO Y HÍBRIDO
-Nubeverde S.A.S. (empresa ficticia) - Código GH-LIN-011 - Vigente desde el 15 de marzo de 2026
+GrupoBios (contenido ficticio de ejemplo) - Código GH-LIN-011 - Vigente desde el 15 de marzo de 2026
 
 QUIÉN PUEDE TRABAJAR EN REMOTO
 Pueden acogerse al esquema híbrido los colaboradores que lleven al menos 3 meses en la empresa, cuyo cargo no requiera presencia física permanente y que tengan aprobación de su jefe inmediato. Los cargos de bodega, recepción y mantenimiento no son elegibles.
@@ -14,10 +14,10 @@ AUXILIO DE CONECTIVIDAD
 Quien trabaje en remoto al menos 4 días al mes recibe un auxilio de conectividad de $85.000 mensuales, pagado en la nómina de fin de mes. No se paga en los meses de vacaciones completas o licencia.
 
 SEGURIDAD DE LA INFORMACIÓN
-Es obligatorio conectarse a la VPN corporativa (aplicación Nubeverde Connect) para acceder a cualquier sistema interno. No se permite trabajar desde redes Wi-Fi públicas sin VPN. Los documentos de la empresa solo se guardan en la unidad corporativa en la nube, nunca en el equipo personal.
+Es obligatorio conectarse a la VPN corporativa (aplicación GrupoBios Connect) para acceder a cualquier sistema interno. No se permite trabajar desde redes Wi-Fi públicas sin VPN. Los documentos de la empresa solo se guardan en la unidad corporativa en la nube, nunca en el equipo personal.
 
 EQUIPOS
 La empresa entrega portátil y diadema. Si el equipo falla, repórtalo a la mesa de servicio de TI como incidente; no lo lleves a reparar por tu cuenta.
 
 ACCIDENTES DE TRABAJO EN CASA
-Un accidente ocurrido durante la jornada remota y en el lugar de trabajo registrado se reporta igual que en la oficina: avisa a tu jefe y a Seguridad y Salud en el Trabajo en las 24 horas siguientes (sst@nubeverde.example).
+Un accidente ocurrido durante la jornada remota y en el lugar de trabajo registrado se reporta igual que en la oficina: avisa a tu jefe y a Seguridad y Salud en el Trabajo en las 24 horas siguientes (sst@grupobios.example).

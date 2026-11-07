@@ -16,7 +16,7 @@
 | Claude Haiku 5.5 (`claude-haiku-5-5`) | API de Anthropic | Es el modelo del producto, no una herramienta de desarrollo; aparece aquí porque la evaluación (`scripts/evaluate.py`) lo usa para medir la calidad | Evaluación |
 
 No usé autocompletado en el editor ni otros asistentes. Los documentos de ejemplo de
-`knowledge_base/` (empresa ficticia Nubeverde S.A.S.) los redactó Claude Code, como permite
+`knowledge_base/` (empresa GrupoBios, con contenido ficticio) los redactó Claude Code, como permite
 el enunciado (§8).
 
 ## Flujo de trabajo
@@ -133,7 +133,7 @@ producía la herramienta.
   Revisé el log y la tabla de preguntas sin respuesta después de cada prueba.
 - **La API real:** el comando de verificación en cuatro casos (configuración correcta,
   proveedor sin key, modelo inexistente, Haiku 4.5 sin `effort`) y la evaluación completa
-  cuatro veces.
+  cinco veces.
 - **Docker:** construí la imagen, arranqué el contenedor, hice una llamada real al LLM desde
   adentro y reinicié para confirmar que no se volvía a descargar el modelo.
 - **Las salidas intermedias:** fragmentos del PDF, el prompt final (está en ARQUITECTURA) y
@@ -243,7 +243,7 @@ final (T-41/T-42).
 ### 2026-11-06 — Ingesta y fragmentación (S3: T-06 a T-11)
 
 **Documentos de ejemplo generados con IA** (lo pide el enunciado, §8): los cuatro
-documentos de `knowledge_base/` (empresa ficticia Nubeverde S.A.S.) los redactó la
+documentos de `knowledge_base/` (empresa GrupoBios, con contenido ficticio) los redactó la
 herramienta con datos concretos y verificables (15 días hábiles, tope de $60.000 diarios,
 prioridades P1–P4, auxilio de $85.000). El PDF y el DOCX se generan con
 `python -m scripts.build_sample_docs`, para que se puedan reproducir. Para el PDF se
@@ -448,3 +448,16 @@ su teléfono.
   herramienta, anotadas en la tabla de sugerencias corregidas.
 - El costo por consulta usa los tokens medidos por tipo de consulta, no una estimación de
   tamaño del prompt.
+
+### 2026-11-07 — Nombre de la empresa en los documentos de ejemplo
+
+A pedido del autor, los documentos de ejemplo pasaron de "Nubeverde S.A.S." a "GrupoBios",
+conservando la aclaración de que el contenido es ficticio (el enunciado pide documentos de
+una empresa imaginaria). Los correos y la página de contraseñas usan el dominio
+`grupobios.example`, reservado para ejemplos, para no inventar direcciones reales. El PDF y
+el DOCX se regeneraron con `python -m scripts.build_sample_docs`.
+
+Repetí la evaluación con los documentos cambiados y falló un seguimiento (`seg_portatil`)
+que antes pasaba. La búsqueda acertó y el modelo respondió `NO_ENCONTRADO`; al repetirlo 5
+veces pasó las 5. Lo dejé registrado como fallo en `docs/EVALUACION.md`, en lugar de
+repetir la ejecución completa hasta que saliera perfecta.

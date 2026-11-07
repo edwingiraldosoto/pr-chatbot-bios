@@ -1,6 +1,6 @@
 # Política de vacaciones
 
-Nubeverde S.A.S. (empresa ficticia). Código: GH-POL-004. Versión 3, vigente desde el
+GrupoBios (contenido ficticio de ejemplo). Código: GH-POL-004. Versión 3, vigente desde el
 1 de febrero de 2026. Responsable: Dirección de Gestión Humana.
 
 ## 1. Alcance
@@ -57,5 +57,5 @@ debe disfrutarse en tiempo.
 ## 7. Interrupción de vacaciones
 
 Si durante las vacaciones el colaborador recibe una incapacidad médica, debe enviarla a
-gestionhumana@nubeverde.example en los 2 días hábiles siguientes. Los días de la
+gestionhumana@grupobios.example en los 2 días hábiles siguientes. Los días de la
 incapacidad se le devuelven al saldo de vacaciones.
