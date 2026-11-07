@@ -144,11 +144,11 @@ Cambio pedido por el autor el 2026-11-06 para la evaluación (CA-07.5, RNF-08, p
 
 ## Fase S9: Documentación
 
-- [ ] T-40 [P] README completo: requisitos, instalación, BotFather, ID de usuario, ejecución en ≤ 4 comandos, documentos, ejemplos, proveedores, limitaciones, mapa — `README.md` — RNF-02
-- [ ] T-41 [P] Arquitectura: diagrama, flujo de ingesta, flujo de pregunta con prompt final, estructura de carpetas — `docs/ARQUITECTURA.md`
-- [ ] T-42 [P] Registro de decisiones (las 8 exigidas + las del diseño) en formato contexto → opciones → decisión → justificación → consecuencias — `docs/DECISIONES.md`
-- [ ] T-43 [P] Criterio técnico: lo más difícil, qué cambiaría, producción, riesgos, costo por consulta con cálculo, exclusiones, medición de valor — `docs/CRITERIO_TECNICO.md`
-- [ ] T-44 [P] Uso de IA: herramientas y versiones, flujo, prompts representativos, sugerencias rechazadas, verificación manual, proporción generada — `docs/USO_IA.md`
+- [x] T-40 [P] README completo: requisitos, instalación, BotFather, ID de usuario, ejecución en ≤ 4 comandos, documentos, ejemplos, proveedores, limitaciones, mapa — `README.md` — RNF-02
+- [x] T-41 [P] Arquitectura: diagrama, flujo de ingesta, flujo de pregunta con prompt final, estructura de carpetas — `docs/ARQUITECTURA.md`
+- [x] T-42 [P] Registro de decisiones (las 8 exigidas + las del diseño) en formato contexto → opciones → decisión → justificación → consecuencias — `docs/DECISIONES.md`
+- [x] T-43 [P] Criterio técnico: lo más difícil, qué cambiaría, producción, riesgos, costo por consulta con cálculo, exclusiones, medición de valor — `docs/CRITERIO_TECNICO.md`
+- [x] T-44 [P] Uso de IA: herramientas y versiones, flujo, prompts representativos, sugerencias rechazadas, verificación manual, proporción generada — `docs/USO_IA.md`
 
 ---
 
@@ -239,11 +239,11 @@ Estado al momento de la entrega (se actualiza al cerrar cada fase).
 | T-37 | RF-14 | S7 | Terminada | `7f4beea` |
 | T-38 | SC-001–SC-003 | S8 | Terminada | `bb8d5a5`, `b4afa16` |
 | T-39 | RF-03–RF-05, RF-12, RNF-04 | S8 | Terminada salvo la prueba con lector de pantalla (la hace el autor) | `550c71c`, `39ec3d5`, este commit |
-| T-40 | RNF-02 | S9 | Pendiente | — |
-| T-41 | Enunciado §6.2 | S9 | Pendiente | — |
-| T-42 | Enunciado §6.3 | S9 | Pendiente | — |
-| T-43 | Enunciado §6.6 | S9 | Pendiente | — |
-| T-44 | Enunciado §6.4 | S9 | Pendiente | — |
+| T-40 | RNF-02 | S9 | Terminada | `e235e8b` |
+| T-41 | Enunciado §6.2 | S9 | Terminada | `8faea03` |
+| T-42 | Enunciado §6.3 | S9 | Terminada | `6c94b4a` |
+| T-43 | Enunciado §6.6 | S9 | Terminada | `cf81c5b` |
+| T-44 | Enunciado §6.4 | S9 | Terminada | este commit |
 | T-45 | RNF-02, RNF-03 | S10 | Pendiente | — |
 
 ### Cobertura de requisitos
