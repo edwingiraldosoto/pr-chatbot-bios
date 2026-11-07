@@ -128,10 +128,10 @@ Cambio pedido por el autor el 2026-11-06 para la evaluación (CA-07.5, RNF-08, p
 
 ## Fase S7: Historia 9 y extras (P3, solo si S2–S6 están completas)
 
-- [ ] T-34 [US9] Revisión de texto sospechoso (`off`/`warn`/`quarantine`) con fixture inyectado — `src/mesa_ayuda/ingest/injection_check.py`, `tests/unit/test_injection_check.py`, `tests/fixtures/` — RF-13
-- [ ] T-35 [US9] Reindexación diaria con JobQueue y aviso a administradores — `src/mesa_ayuda/__main__.py`, `tests/unit/test_scheduler.py` — RF-11
-- [ ] T-36 [P] Dockerfile y `compose.yaml` con volúmenes para `data/` y la caché del modelo — `Dockerfile`, `compose.yaml` — CA-R2.4
-- [ ] T-37 Botón "Descargar <documento>" por fuente citada (prioridad más baja) — `src/mesa_ayuda/bot/handlers.py` — RF-14
+- [x] T-34 [US9] Revisión de texto sospechoso (`off`/`warn`/`quarantine`) con fixture inyectado — `src/mesa_ayuda/ingest/injection_check.py`, `tests/unit/test_injection_check.py`, `tests/fixtures/` — RF-13
+- [x] T-35 [US9] Reindexación diaria con JobQueue y aviso a administradores — `src/mesa_ayuda/__main__.py`, `tests/unit/test_scheduler.py` — RF-11
+- [x] T-36 [P] Dockerfile y `compose.yaml` con volúmenes para `data/` y la caché del modelo — `Dockerfile`, `compose.yaml` — CA-R2.4
+- [x] T-37 Botón "Descargar <documento>" por fuente citada (prioridad más baja) — `src/mesa_ayuda/bot/handlers.py` — RF-14
 
 ---
 
@@ -233,10 +233,10 @@ Estado al momento de la entrega (se actualiza al cerrar cada fase).
 | T-51 | RF-07, RNF-08 | S6 | Terminada | `ba1b385` |
 | T-52 | RF-07 | S6 | Terminada | `3a7e507` |
 | T-53 | RNF-08 | S6 | Terminada | `ed3d3e3` |
-| T-34 | RF-13 | S7 | Pendiente | — |
-| T-35 | RF-11 | S7 | Pendiente | — |
-| T-36 | RNF-02 | S7 | Pendiente | — |
-| T-37 | RF-14 | S7 | Pendiente | — |
+| T-34 | RF-13 | S7 | Terminada | `46e6c3a` |
+| T-35 | RF-11 | S7 | Terminada | `eda1c11` |
+| T-36 | RNF-02 | S7 | Terminada | `d1d8c77` |
+| T-37 | RF-14 | S7 | Terminada | `7f4beea` |
 | T-38 | SC-001–SC-003 | S8 | Pendiente | — |
 | T-39 | RF-03–RF-05, RF-12, RNF-04 | S8 | Pendiente | — |
 | T-40 | RNF-02 | S9 | Pendiente | — |

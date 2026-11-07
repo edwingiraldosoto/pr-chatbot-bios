@@ -247,3 +247,21 @@ hicieron fallar al menos una prueba):
   corrigió en `331f11f`: ahora es una advertencia de una línea.
 - Hallazgo para S8: la reformulación a veces inventa ("Cómo formatear un ocho" se buscó
   como "¿Cómo se formatea un disco de 8 TB?") o contesta en lugar de reescribir.
+
+### 2026-11-07 — Extras (S7: T-34 a T-37)
+
+**Criterio aplicado a lo generado**:
+- Revisión de texto sospechoso (T-34): los patrones se ajustaron con frases normales de
+  política que comparten palabras ("siga las instrucciones anteriores del manual", "el
+  asistente administrativo debe aprobar") y con los 4 documentos de ejemplo, que no dan
+  ninguna advertencia. El modo de revisión entra en los ajustes del índice: sin eso, pasar
+  de `warn` a `quarantine` no volvía a revisar los documentos sin cambios.
+- Reindexación programada (T-35): avisa solo si hubo cambios o errores (CA-11.3) y se
+  omite si ya corre un `/reindex`.
+- Docker (T-36): verificado de verdad, no solo escrito. Se construyó la imagen (1,0 GB),
+  el bot arrancó en el contenedor, el comando de verificación hizo una llamada real al LLM y
+  un reinicio retomó el índice sin volver a descargar el modelo.
+- Botón de descarga (T-37): el dato del botón es una huella, no la ruta. Una prueba con un
+  manifest manipulado (`../secreto.txt`) confirma que no se envían archivos fuera de la
+  carpeta. Una mutación (quitar la revisión de estado `indexed`) sobrevivió al principio
+  porque el PDF ilegible de la prueba no existía en disco; se corrigió la prueba.
