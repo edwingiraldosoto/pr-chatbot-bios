@@ -42,6 +42,7 @@ def test_question_set_meets_the_minimums() -> None:
     assert kinds.count("follow_up") >= 2
     assert kinds.count("injection_document") >= 1 and kinds.count("injection_message") >= 1
     assert len({case.id for case in cases}) == len(cases)
+    assert all(case.expected for case in cases)  # el informe muestra la esperada
     for case in cases:
         if case.kind in ("in_scope", "follow_up", "injection_document"):
             assert case.sources and case.facts, case.id

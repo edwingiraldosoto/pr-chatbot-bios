@@ -58,6 +58,7 @@ class Case:
     id: str
     kind: str
     question: str
+    expected: str = ""  # respuesta esperada en palabras, para el informe
     history: tuple[str, ...] = ()
     sources: tuple[str, ...] = ()
     facts: tuple[tuple[str, ...], ...] = ()
@@ -72,6 +73,7 @@ class CaseResult:
     id: str
     kind: str
     question: str
+    expected: str
     passed: bool
     reasons: list[str]
     outcome: str
@@ -94,6 +96,7 @@ def load_cases(path: Path = QUESTIONS) -> list[Case]:
             id=item["id"],
             kind=item["kind"],
             question=item["question"],
+            expected=item.get("expected", ""),
             history=tuple(item.get("history", ())),
             sources=tuple(item.get("sources", ())),
             facts=tuple(tuple(options) for options in item.get("facts", ())),
@@ -302,6 +305,24 @@ def render(results: Sequence[CaseResult], summary: Summary, params: dict[str, An
     return "\n".join(lines)
 
 
+def render_detail(results: Sequence[CaseResult], answer_chars: int = 220) -> str:
+    """Pregunta, respuesta esperada, respuesta obtenida y si es correcta (enunciado 6.5)."""
+    lines = [
+        "| Caso | Pregunta | Respuesta esperada | Respuesta obtenida | ¿Correcta? |",
+        "|---|---|---|---|---|",
+    ]
+    for r in results:
+        obtained = " ".join(r.answer.split()) or f"(no encontrado: {r.outcome})"
+        if len(obtained) > answer_chars:
+            obtained = obtained[: answer_chars - 1].rstrip() + "…"
+        question = r.question
+        if r.search_question != r.question:
+            question += f" (buscó: {r.search_question})"
+        cells = [f"`{r.id}`", question, r.expected, obtained, "Sí" if r.passed else "No"]
+        lines.append("| " + " | ".join(cell.replace("|", "/") for cell in cells) + " |")
+    return "\n".join(lines)
+
+
 def _expected_rank(case: Case, retriever: Retriever, question: str) -> tuple[int | None, float]:
     retrieval = retriever.retrieve(question)
     rank = next(
@@ -328,6 +349,7 @@ async def run_case(case: Case, service: AnswerService, retriever: Retriever) -> 
         id=case.id,
         kind=case.kind,
         question=case.question,
+        expected=case.expected,
         passed=passed,
         reasons=reasons,
         outcome=answer.outcome.value,
@@ -472,6 +494,8 @@ async def _main(args: argparse.Namespace) -> int:
     params["tokens"] = f"{tokens_in} de entrada y {tokens_out} de salida"
     print()
     print(render(results, summary, params))
+    print()
+    print(render_detail(results))
     if args.salida:
         args.salida.parent.mkdir(parents=True, exist_ok=True)
         args.salida.write_text(
