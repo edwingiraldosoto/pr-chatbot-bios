@@ -50,7 +50,9 @@ def test_user_texts_are_plain_and_accessible() -> None:
         value for name, value in vars(messages).items() if name.isupper() and isinstance(value, str)
     ]
     texts = [
-        text.format(user_id=1, reason="motivo", hello="Hola", link="https://t.me/bot?start=codigo")
+        text.format(
+            user_id=1, reason="motivo", hello="Hola", link="https://t.me/bot?start=codigo", n="50"
+        )
         for text in templates
     ]
     texts += [help_text(is_admin=True)]
@@ -198,3 +200,10 @@ def test_greeting_is_cordial_and_points_to_help(first_name: str | None, start: s
 def test_thanks_and_farewell_replies() -> None:
     assert messages.small_talk(SmallTalk.THANKS, "Edwin") == messages.THANKS
     assert messages.small_talk(SmallTalk.FAREWELL) == messages.FAREWELL
+
+
+def test_limits_use_spanish_thousands() -> None:
+    assert messages.too_long(1000) == (
+        "Tu pregunta es muy larga (máximo 1.000 caracteres). Resúmela en una o dos frases."
+    )
+    assert messages.quota_user(50).startswith("Llegaste al máximo de 50 preguntas por hoy.")

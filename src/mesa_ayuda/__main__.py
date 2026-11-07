@@ -106,6 +106,9 @@ def build(
         duplicates=DuplicateFilter(settings.duplicate_window_seconds),
         invite_code=(settings.invite_code.get_secret_value() if settings.invite_code else None),
         timezone=ZoneInfo(settings.reindex_timezone),
+        daily_questions_per_user=settings.daily_questions_per_user,
+        daily_questions_total=settings.daily_questions_total,
+        max_question_chars=settings.max_question_chars,
     )
     application: AnyApplication = (
         Application.builder()

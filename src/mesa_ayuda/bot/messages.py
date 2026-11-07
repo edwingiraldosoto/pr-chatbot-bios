@@ -99,6 +99,9 @@ INVITE_LINK = (
     "el bot. Para retirar a una persona, usa /revocar con su ID (está en /invitados)."
 )
 NO_INVITED = "Nadie ha entrado todavía con el enlace vigente."
+QUOTA_USER = "Llegaste al máximo de {n} preguntas por hoy. Vuelve a intentarlo mañana."
+QUOTA_TOTAL = "El asistente alcanzó el máximo de preguntas de hoy. Vuelve a intentarlo mañana."
+TOO_LONG = "Tu pregunta es muy larga (máximo {n} caracteres). Resúmela en una o dos frases."
 REVOKE_USAGE = "Uso: /revocar ID. Los ID están en /invitados."
 REVOKED = "Listo: el usuario {user_id} ya no tiene acceso."
 NOT_INVITED = "El usuario {user_id} no tenía una invitación."
@@ -133,6 +136,20 @@ def access_denied(user_id: int) -> str:
 def reindex_failed(reason: str) -> str:
     """Aviso al administrador cuando la reindexación no pudo terminar."""
     return REINDEX_FAILED.format(reason=reason.rstrip("."))
+
+
+def _thousands(n: int) -> str:
+    return f"{n:,}".replace(",", ".")
+
+
+def quota_user(limit: int) -> str:
+    """Aviso de tope diario del usuario (CA-R8.1)."""
+    return QUOTA_USER.format(n=_thousands(limit))
+
+
+def too_long(limit: int) -> str:
+    """Aviso de pregunta demasiado larga (CA-R8.3)."""
+    return TOO_LONG.format(n=_thousands(limit))
 
 
 def invite_link(bot_username: str, code: str) -> str:

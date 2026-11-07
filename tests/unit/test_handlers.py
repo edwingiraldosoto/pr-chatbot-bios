@@ -91,6 +91,7 @@ def make_handlers(
     log_questions: bool = False,
     typing_interval: float = 4.0,
     invite_code: str | None = None,
+    **limits: int,
 ) -> BotHandlers:
     return BotHandlers(
         access=AccessControl(allowed=[USER], admins=[ADMIN]),
@@ -101,6 +102,7 @@ def make_handlers(
         log_questions=log_questions,
         typing_interval=typing_interval,
         invite_code=invite_code,
+        **limits,  # type: ignore[arg-type]
     )
 
 
@@ -739,3 +741,83 @@ async def test_invite_code_never_reaches_the_log(storage: Storage, index: FakeIn
     outcomes = [json.loads(line).get("outcome") for line in stream.getvalue().splitlines()]
     assert "denied" in outcomes and "invited" in outcomes
     assert "evaluacion" not in stream.getvalue()
+
+
+# --- Topes de costo (T-53; RNF-08) ----------------------------------------------------------
+
+
+async def test_user_daily_limit_stops_before_the_model(storage: Storage, index: FakeIndex) -> None:
+    # CA-R8.1
+    script = ScriptedAnswers()
+    handlers = make_handlers(storage, index, answers=script, daily_questions_per_user=2)
+    async with TelegramHarness(handlers) as bot:
+        first = await bot.send(USER, "¿Pregunta uno?")
+        second = await bot.send(USER, "¿Pregunta dos?")
+        third = await bot.send(USER, "¿Pregunta tres?")
+        greeting = await bot.send(USER, "hola")  # los saludos no cuentan
+        other = await bot.send(ADMIN, "¿Pregunta del admin?")
+
+    assert first[0].startswith("Respuesta.") and second[0].startswith("Respuesta.")
+    assert third == [messages.quota_user(2)]
+    assert greeting[0].startswith("Hola")
+    assert other[0].startswith("Respuesta.")
+    assert [q for q, _ in script.calls] == [
+        "¿Pregunta uno?",
+        "¿Pregunta dos?",
+        "¿Pregunta del admin?",
+    ]
+
+
+async def test_total_daily_limit_blocks_everyone_but_admins(
+    storage: Storage, index: FakeIndex
+) -> None:
+    # CA-R8.2, CA-R8.4
+    handlers = make_handlers(storage, index, invite_code=CODE, daily_questions_total=2)
+    async with TelegramHarness(handlers) as bot:
+        await bot.send(STRANGER, f"/start {CODE}")
+        await bot.send(USER, "¿Uno?")
+        await bot.send(ADMIN, "¿Dos?")  # el admin cuenta en el total
+        with capture_logs() as logs:
+            blocked_user = await bot.send(USER, "¿Tres?")
+            blocked_guest = await bot.send(STRANGER, "¿Cuatro?")
+        admin = await bot.send(ADMIN, "¿Cinco?")  # pero no tiene tope
+
+    assert blocked_user == [messages.QUOTA_TOTAL]
+    assert blocked_guest == [messages.QUOTA_TOTAL]
+    assert admin[0].startswith("Respuesta.")
+    assert any(e.get("outcome") == "quota_total" and e["log_level"] == "warning" for e in logs)
+
+
+async def test_errors_of_the_model_still_use_quota(storage: Storage, index: FakeIndex) -> None:
+    script = ScriptedAnswers([LLMUnavailableError("503")])
+    handlers = make_handlers(storage, index, answers=script, daily_questions_per_user=1)
+    async with TelegramHarness(handlers) as bot:
+        assert await bot.send(USER, "¿Uno?") == [messages.LLM_UNAVAILABLE]
+        assert await bot.send(USER, "¿Dos?") == [messages.quota_user(1)]
+
+
+async def test_too_long_question_is_rejected_without_using_quota(
+    storage: Storage, index: FakeIndex
+) -> None:
+    # CA-R8.3
+    script = ScriptedAnswers()
+    handlers = make_handlers(
+        storage, index, answers=script, max_question_chars=50, daily_questions_per_user=1
+    )
+    async with TelegramHarness(handlers) as bot:
+        long_reply = await bot.send(USER, "x" * 51)
+        ok = await bot.send(USER, "y" * 50)
+
+    assert long_reply == [messages.too_long(50)]
+    assert ok[0].startswith("Respuesta.")  # el rechazo no gastó el único cupo
+    assert [q for q, _ in script.calls] == ["y" * 50]
+
+
+async def test_quota_counts_per_day_in_the_bot_timezone(storage: Storage, index: FakeIndex) -> None:
+    handlers = make_handlers(storage, index, daily_questions_per_user=1)
+    days = iter(["2026-11-06", "2026-11-06", "2026-11-07"])
+    handlers.today = lambda: next(days)  # type: ignore[method-assign]
+    async with TelegramHarness(handlers) as bot:
+        await bot.send(USER, "¿Uno?")
+        assert await bot.send(USER, "¿Dos?") == [messages.quota_user(1)]
+        assert (await bot.send(USER, "¿Tres?"))[0].startswith("Respuesta.")  # día nuevo

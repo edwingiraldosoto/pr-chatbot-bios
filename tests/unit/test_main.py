@@ -106,6 +106,13 @@ def test_starts_after_the_initial_index_and_polls_only_messages(
     assert (starting["provider"], starting["documents"], starting["admins"]) == ("anthropic", 1, 1)
     assert TOKEN not in out  # RNF-03
     assert fakes["handlers"].duplicates.window_seconds == 5  # valor de config por defecto
+    handlers = fakes["handlers"]
+    assert (
+        handlers.daily_questions_per_user,
+        handlers.daily_questions_total,
+        handlers.max_question_chars,
+        str(handlers.timezone),
+    ) == (50, 300, 1000, "America/Bogota")
     assert (workdir / "data" / "bot.sqlite3").is_file()
 
 

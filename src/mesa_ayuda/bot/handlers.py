@@ -59,7 +59,7 @@ from mesa_ayuda.llm.base import (
     LLMTimeoutError,
 )
 from mesa_ayuda.logging_setup import bind_request, get_logger, new_request_id
-from mesa_ayuda.storage import Storage, UnansweredReason
+from mesa_ayuda.storage import Quota, Storage, UnansweredReason
 
 log = get_logger(__name__)
 
@@ -132,6 +132,10 @@ class BotHandlers:
         duplicates: Filtro de copias repetidas; sin él no se filtran (CA-R5.7).
         invite_code: ``INVITE_CODE``; sin él no hay invitaciones (CA-07.5).
         timezone: Zona horaria del día de los topes y de ``/invitados``.
+        daily_questions_per_user: Tope diario por usuario (CA-R8.1); ``None`` = sin tope.
+        daily_questions_total: Tope diario de todos (CA-R8.2); ``None`` = sin tope.
+        max_question_chars: Largo máximo de una pregunta (CA-R8.3); ``None`` = sin
+            límite.
     """
 
     def __init__(
@@ -147,6 +151,9 @@ class BotHandlers:
         duplicates: DuplicateFilter | None = None,
         invite_code: str | None = None,
         timezone: tzinfo = UTC,
+        daily_questions_per_user: int | None = None,
+        daily_questions_total: int | None = None,
+        max_question_chars: int | None = None,
     ) -> None:
         self.access = access
         self.limiter = limiter
@@ -159,6 +166,9 @@ class BotHandlers:
         self.invite_code = invite_code
         self._invite_hash = invite_fingerprint(invite_code) if invite_code else None
         self.timezone = timezone
+        self.daily_questions_per_user = daily_questions_per_user
+        self.daily_questions_total = daily_questions_total
+        self.max_question_chars = max_question_chars
         self._user_locks: dict[int, asyncio.Lock] = {}
 
     def register(self, application: AnyApplication) -> None:
@@ -370,6 +380,8 @@ class BotHandlers:
             await reply(message, messages.small_talk(kind, first_name))
             log.info("message_handled", outcome="small_talk", kind=kind.value)
             return
+        if not await self._within_limits(message, user_id, text):
+            return
         started = time.perf_counter()
         async with self._lock(user_id):
             async with self._typing(context.bot, message.chat_id):
@@ -391,6 +403,30 @@ class BotHandlers:
             **({"question": text} if self.log_questions else {}),
         )
         log.debug("question_text", question=text)
+
+    async def _within_limits(self, message: Message, user_id: int, text: str) -> bool:
+        """Largo máximo y cupo diario; descuenta el cupo si la pregunta sigue (RNF-08)."""
+        if self.max_question_chars is not None and len(text) > self.max_question_chars:
+            await reply(message, messages.too_long(self.max_question_chars))
+            log.info("message_handled", outcome="too_long", chars=len(text))
+            return False
+        exempt = self.access.is_admin(user_id)  # CA-R8.4: cuentan, pero sin tope
+        quota = self.storage.take_question(
+            user_id,
+            day=self.today(),
+            user_limit=None if exempt else self.daily_questions_per_user,
+            total_limit=None if exempt else self.daily_questions_total,
+        )
+        if quota is Quota.OK:
+            return True
+        if quota is Quota.USER_LIMIT:
+            assert self.daily_questions_per_user is not None
+            await reply(message, messages.quota_user(self.daily_questions_per_user))
+            log.info("message_handled", outcome="quota_user")
+        else:
+            await reply(message, messages.QUOTA_TOTAL)
+            log.warning("message_handled", outcome="quota_total", limit=self.daily_questions_total)
+        return False
 
     async def _answer(self, user_id: int, text: str) -> tuple[str, str, Answer | None]:
         """Resultado para el log, texto para el usuario y la respuesta (si la hubo)."""
