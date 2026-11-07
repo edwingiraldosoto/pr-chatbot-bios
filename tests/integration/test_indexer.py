@@ -235,7 +235,10 @@ def test_changing_chunk_size_rebuilds_into_a_new_collection(ws: Workspace) -> No
     summary = ws.indexer(chunk_size=600).reindex()
 
     assert summary.full_rebuild
-    assert summary.rebuild_reason == "cambió el modelo de embeddings o la fragmentación"
+    assert (
+        summary.rebuild_reason
+        == "cambiaron los ajustes del índice (modelo, fragmentación o revisión de texto sospechoso)"
+    )
     assert collection_names(ws.data / "chroma") == ["kb_2"]
     assert ws.manifest()["collection"] == "kb_2"
 
@@ -398,3 +401,75 @@ def test_queries_during_updates_never_mix_versions_or_see_empty(ws: Workspace) -
     assert problems == []
     assert searches > 10
     assert ws.search(indexer, "vacaciones") == ["vacaciones.md@11"]
+
+
+# --- Texto sospechoso (T-34; RF-13) ---------------------------------------------------------
+
+INJECTED = (FIXTURES / "inyeccion.md").read_text(encoding="utf-8")
+
+
+def test_warn_indexes_the_document_and_records_the_finding(ws: Workspace) -> None:
+    # CA-13.1
+    ws.write("impresoras.md", INJECTED)
+    indexer = ws.indexer(injection_check="warn")
+
+    summary = indexer.reindex()
+
+    assert summary.added == ["impresoras.md"] and summary.quarantined == []
+    (info,) = indexer.sources()
+    assert info.status == "indexed"
+    assert len(info.warnings) == 2
+    assert info.warnings[0].startswith('sección "Mantenimiento": texto que parece una instrucción')
+    assert ws.search(indexer, "cupo de impresión") == ["impresoras.md@1"]
+
+
+def test_quarantine_leaves_the_document_out(ws: Workspace) -> None:
+    # CA-13.2
+    ws.write("impresoras.md", INJECTED)
+    ws.write("vacaciones.md", VACATIONS_V1)
+    indexer = ws.indexer(injection_check="quarantine")
+
+    summary = indexer.reindex()
+
+    assert summary.added == ["vacaciones.md"]
+    assert [source for source, _ in summary.quarantined] == ["impresoras.md"]
+    assert "y otros" in summary.quarantined[0][1]  # dos hallazgos
+    statuses = {info.source: info.status for info in indexer.sources()}
+    assert statuses == {"impresoras.md": "quarantined", "vacaciones.md": "indexed"}
+    assert ws.search(indexer, "cupo de impresión impresoras") == ["vacaciones.md@1"]
+
+
+def test_document_edited_to_include_an_injection_is_withdrawn(ws: Workspace) -> None:
+    ws.write("impresoras.md", "# Impresoras\n\nCupo de 200 páginas al mes.\n")
+    indexer = ws.indexer(injection_check="quarantine")
+    indexer.reindex()
+
+    ws.write("impresoras.md", INJECTED)
+    summary = indexer.reindex()
+
+    assert [source for source, _ in summary.quarantined] == ["impresoras.md"]
+    assert ws.search(indexer, "cupo de impresión") == []  # la versión limpia también sale
+
+
+def test_off_does_not_check(ws: Workspace) -> None:
+    # CA-13.3
+    ws.write("impresoras.md", INJECTED)
+    indexer = ws.indexer(injection_check="off")
+
+    indexer.reindex()
+
+    assert indexer.sources()[0].warnings == ()
+
+
+def test_changing_the_mode_rechecks_every_document(ws: Workspace) -> None:
+    ws.write("impresoras.md", INJECTED)
+    ws.indexer(injection_check="warn").reindex()
+
+    summary = ws.indexer(injection_check="quarantine").reindex()  # proceso nuevo, otro modo
+
+    assert summary.full_rebuild
+    assert (
+        summary.rebuild_reason
+        == "cambiaron los ajustes del índice (modelo, fragmentación o revisión de texto sospechoso)"
+    )
+    assert [source for source, _ in summary.quarantined] == ["impresoras.md"]

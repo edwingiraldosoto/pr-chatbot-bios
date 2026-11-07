@@ -226,6 +226,9 @@ def reindex_summary(summary: ReindexSummary, warnings: Sequence[tuple[str, str]]
     if summary.unreadable:
         items = "; ".join(f"{source} ({reason})" for source, reason in summary.unreadable)
         lines.append(f"Ilegibles: {items}.")
+    if summary.quarantined:
+        items = "; ".join(f"{source} ({reason})" for source, reason in summary.quarantined)
+        lines.append(f"En cuarentena (no se indexaron): {items}.")
     if summary.ignored:
         lines.append(
             f"Ignorados: {_count(summary.ignored, 'archivo', 'archivos')} ocultos, temporales "

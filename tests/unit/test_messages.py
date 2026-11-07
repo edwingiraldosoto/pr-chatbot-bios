@@ -207,3 +207,18 @@ def test_limits_use_spanish_thousands() -> None:
         "Tu pregunta es muy larga (máximo 1.000 caracteres). Resúmela en una o dos frases."
     )
     assert messages.quota_user(50).startswith("Llegaste al máximo de 50 preguntas por hoy.")
+
+
+def test_summary_lists_quarantined_documents() -> None:
+    # CA-13.2
+    summary = ReindexSummary(
+        unchanged=2,
+        quarantined=[
+            ("impresoras.md", 'sección "Mantenimiento": texto que parece una instrucción')
+        ],
+    )
+
+    assert reindex_summary(summary).splitlines()[1] == (
+        'En cuarentena (no se indexaron): impresoras.md (sección "Mantenimiento": texto que '
+        "parece una instrucción)."
+    )

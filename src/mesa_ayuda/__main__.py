@@ -75,6 +75,7 @@ def build(
         embedder=embedder,
         chunk_size=settings.chunk_size,
         chunk_overlap=settings.chunk_overlap,
+        injection_check=settings.injection_check,
     )
     indexer.reindex()  # el resumen queda en el log (reindex_finished)
 

@@ -41,6 +41,7 @@ from mesa_ayuda.indexing.manifest import (
 )
 from mesa_ayuda.ingest.chunker import chunk_sections
 from mesa_ayuda.ingest.discovery import DiscoveredFile, discover
+from mesa_ayuda.ingest.injection_check import InjectionMode, find_suspicious
 from mesa_ayuda.ingest.loaders import UnreadableDocumentError, load_document
 from mesa_ayuda.logging_setup import get_logger
 from mesa_ayuda.vectorstore import (
@@ -53,6 +54,10 @@ from mesa_ayuda.vectorstore import (
 )
 
 log = get_logger(__name__)
+
+SETTINGS_CHANGED = (
+    "cambiaron los ajustes del índice (modelo, fragmentación o revisión de texto sospechoso)"
+)
 
 _COLLECTION_NUMBER = re.compile(rf"^{COLLECTION_PREFIX}(\d+)$")
 
@@ -70,6 +75,7 @@ class ReindexSummary:
     removed: list[str] = field(default_factory=list)
     unchanged: int = 0
     unreadable: list[tuple[str, str]] = field(default_factory=list)  # (ruta, motivo)
+    quarantined: list[tuple[str, str]] = field(default_factory=list)  # (ruta, hallazgo)
     ignored: int = 0  # archivos ocultos, temporales o de formato no soportado
     full_rebuild: bool = False
     rebuild_reason: str = ""
@@ -151,6 +157,7 @@ class Indexer:
         embedder: Embedder,
         chunk_size: int,
         chunk_overlap: int,
+        injection_check: InjectionMode = "warn",
     ) -> None:
         self._knowledge_base = knowledge_base
         self._chroma_path = data_dir / "chroma"
@@ -158,6 +165,7 @@ class Indexer:
         self._embedder = embedder
         self._chunk_size = chunk_size
         self._chunk_overlap = chunk_overlap
+        self._injection_check = injection_check
 
         self._reindex_lock = threading.Lock()  # una reindexación a la vez
         self._rw = _ReadWriteLock()  # búsquedas frente a cambios de versión
@@ -233,6 +241,7 @@ class Indexer:
                 removed=len(summary.removed),
                 unchanged=summary.unchanged,
                 unreadable=len(summary.unreadable),
+                quarantined=len(summary.quarantined),
                 ignored=summary.ignored,
                 full_rebuild=summary.full_rebuild,
                 duration_s=summary.duration_s,
@@ -246,6 +255,7 @@ class Indexer:
             "embedding_model": self._embedder.model_id,
             "chunk_size": self._chunk_size,
             "chunk_overlap": self._chunk_overlap,
+            "injection_check": self._injection_check,
         }
 
     def _rebuild_reason(self, full: bool) -> str:
@@ -257,7 +267,7 @@ class Indexer:
             if manifest is None:
                 return "no hay manifest o está dañado"
             if manifest.settings != self._settings_snapshot():
-                return "cambió el modelo de embeddings o la fragmentación"
+                return SETTINGS_CHANGED
             if manifest.collection not in collection_names(self._chroma_path):
                 return "el índice en disco no existe"
             store = VectorStore(self._chroma_path, manifest.collection)
@@ -271,7 +281,7 @@ class Indexer:
                 self._store = store
                 self._active = manifest.active_doc_keys()
         elif self._manifest.settings != self._settings_snapshot():
-            return "cambió el modelo de embeddings o la fragmentación"
+            return SETTINGS_CHANGED
         return ""
 
     def _incremental(self, files: list[DiscoveredFile]) -> ReindexSummary:
@@ -288,7 +298,7 @@ class Indexer:
             if outcome is None:
                 (summary.added if source in changes.new else summary.updated).append(source)
             else:
-                summary.unreadable.append((source, outcome))
+                self._record_problem(summary, source, outcome)
 
         for source in changes.deleted:
             self._remove(source)
@@ -316,7 +326,7 @@ class Indexer:
             if outcome is None:
                 summary.added.append(item.source)
             else:
-                summary.unreadable.append((item.source, outcome))
+                self._record_problem(summary, item.source, outcome)
 
         # Cambio de puntero: desde aquí las búsquedas usan la colección nueva.
         with self._rw.write():
@@ -326,6 +336,12 @@ class Indexer:
         log.info("index_rebuilt", collection=name, reason=reason, documents=len(active))
         return summary
 
+    @staticmethod
+    def _record_problem(summary: ReindexSummary, source: str, outcome: tuple[str, str]) -> None:
+        status, reason = outcome
+        target = summary.quarantined if status == "quarantined" else summary.unreadable
+        target.append((source, reason))
+
     def _index_file(
         self,
         item: DiscoveredFile,
@@ -334,17 +350,25 @@ class Indexer:
         active: dict[str, str],
         *,
         live: bool,
-    ) -> str | None:
-        """Indexa un archivo. Devuelve ``None`` si quedó indexado o el motivo si no.
+    ) -> tuple[str, str] | None:
+        """Indexa un archivo. Devuelve ``None`` si quedó indexado, o ``(estado, motivo)``.
+
+        El estado es ``unreadable`` o ``quarantined`` (texto sospechoso con
+        ``injection_check: quarantine``, CA-13.2).
 
         Con ``live`` el índice está en uso: el cambio de versión y el retiro de la versión
         anterior se hacen bajo el candado de escritura.
         """
         previous = manifest.documents.get(item.source)
         last_version = previous.version if previous else 0
+        findings = []
         try:
             sections = load_document(item.path)
             chunks = chunk_sections(sections, self._chunk_size, self._chunk_overlap)
+            if self._injection_check != "off":  # CA-13.3
+                findings = [finding.describe() for finding in find_suspicious(chunks)]
+            if findings and self._injection_check == "quarantine":
+                return self._quarantine(item, last_version, findings, manifest, store, active, live)
             vectors = self._embedder.embed_documents([chunk.text for chunk in chunks])
         except UnreadableDocumentError as error:
             reason = str(error)
@@ -376,7 +400,10 @@ class Indexer:
                 status="indexed",
                 chunks=len(chunks),
                 indexed_at=_now(),
+                warnings=findings,  # CA-13.1
             )
+            for finding in findings:
+                log.warning("document_suspicious", source=item.source, finding=finding)
             self._activate(item.source, entry, manifest, store, active, live=live)
             log.info("document_indexed", source=item.source, version=version, chunks=len(chunks))
             return None
@@ -387,7 +414,25 @@ class Indexer:
         )
         self._activate(item.source, entry, manifest, store, active, live=live)
         log.warning("document_unreadable", source=item.source, reason=reason)
-        return reason
+        return ("unreadable", reason)
+
+    def _quarantine(
+        self,
+        item: DiscoveredFile,
+        last_version: int,
+        findings: list[str],
+        manifest: Manifest,
+        store: VectorStore,
+        active: dict[str, str],
+        live: bool,
+    ) -> tuple[str, str]:
+        """Deja fuera un documento sospechoso; su versión anterior, si la había, se retira."""
+        entry = DocumentEntry(
+            hash=item.sha256, version=last_version, status="quarantined", warnings=findings
+        )
+        self._activate(item.source, entry, manifest, store, active, live=live)
+        log.warning("document_quarantined", source=item.source, findings=findings)
+        return ("quarantined", findings[0] if len(findings) == 1 else f"{findings[0]} y otros")
 
     def _activate(
         self,
