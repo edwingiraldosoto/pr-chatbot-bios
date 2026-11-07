@@ -35,6 +35,8 @@ NOT_FOUND_TOKEN = "NO_ENCONTRADO"
 _MARKER = re.compile(r"\[\s*(\d+(?:\s*[,;]\s*\d+)*)\s*\]")
 _MARKER_WITH_SPACE = re.compile(r"[ \t]*" + _MARKER.pattern)
 _SPACES = re.compile(r"[ \t]{2,}")
+# "p. m. [1]." queda como "p. m.." al quitar el marcador; los puntos suspensivos se respetan.
+_DOUBLE_PERIOD = re.compile(r"(?<!\.)\.\.(?!\.)")
 _NOT_LETTERS = re.compile(r"[^A-Z_]")
 
 
@@ -144,7 +146,7 @@ def extract_citations(text: str, fragment_count: int) -> Citations:
             target = used if 1 <= number <= fragment_count else invalid
             if number not in target:
                 target.append(number)
-    clean = _MARKER_WITH_SPACE.sub("", text)
+    clean = _DOUBLE_PERIOD.sub(".", _MARKER_WITH_SPACE.sub("", text))
     clean = "\n".join(_SPACES.sub(" ", line).rstrip() for line in clean.splitlines())
     return Citations(text=clean.strip(), used=used, invalid=invalid)
 

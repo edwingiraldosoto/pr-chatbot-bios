@@ -230,6 +230,9 @@ async def test_outcome_is_logged_without_the_question_text() -> None:
         ),
         ("Sin marcadores.", "Sin marcadores.", []),
         ("El código [ABC] no es marcador [1].", "El código [ABC] no es marcador.", [1]),
+        # Visto en la evaluación: el punto de "p. m." más el del final de la oración.
+        ("Atiende hasta las 7:00 p. m. [1].", "Atiende hasta las 7:00 p. m.", [1]),
+        ("Espera... y luego sigue [2].", "Espera... y luego sigue.", [2]),
     ],
 )
 def test_extract_citations(text: str, clean: str, used: list[int]) -> None:
