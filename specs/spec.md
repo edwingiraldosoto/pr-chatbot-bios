@@ -393,7 +393,7 @@ El usuario MUST recibir un mensaje claro, nunca un silencio ni una traza, ante:
 - **CA-R5.5** Documento ilegible (informado a administradores en el resumen de reindexación).
 - **CA-R5.6** Respuestas más largas que el límite de un mensaje (se dividen).
 - **CA-R5.7** El mismo texto enviado varias veces por el mismo usuario dentro de `DUPLICATE_WINDOW_SECONDS` (por un reenvío del cliente de Telegram o un Enter repetido) se responde una sola vez; las copias se descartan sin responder ni llamar al modelo. Con 0 se desactiva.
-- **CA-R5.8** Una respuesta que el modelo corta por `LLM_MAX_TOKENS` nunca termina a mitad de una palabra: se recorta a la última oración completa y el usuario recibe un aviso de que quedó incompleta. El aviso no se guarda en el historial. Si no queda ninguna oración completa, se responde "no encontrado".
+- **CA-R5.8** Una respuesta que el modelo corta por `LLM_MAX_TOKENS` se pide de nuevo una sola vez con `LLM_TRUNCATED_RETRY_MAX_TOKENS` (1200 por defecto; 0 lo desactiva), para que salga completa. Si también se corta, nunca termina a mitad de una palabra: se recorta a la última oración completa o, si no hay ninguna, a la última palabra completa seguida de "…", y el usuario recibe un aviso de que quedó incompleta. Nunca se responde "no encontrado" cuando el modelo sí empezó a responder. El aviso no se guarda en el historial.
 
 #### RNF-06 — Observabilidad
 
@@ -486,6 +486,7 @@ Pedido del autor: con el bot abierto por invitación, nadie puede agotar los cr�
 | 1.3 | 2026-11-06 | CA-06.5: respuesta cordial a saludos, agradecimientos y despedidas, sin buscar ni llamar al modelo. | Prueba real de S6: "hola" terminaba en "No encontré esa información" (`8cf3812`). |
 | 1.4 | 2026-11-06 | CA-07.5 (enlace de invitación) y RNF-08 (topes diarios y largo máximo de pregunta). | Pedido del autor: que el evaluador entre sin dar su ID antes y sin poder agotar los créditos de la API (`59c79e2`). |
 | 1.5 | 2026-11-07 | CA-R5.8: respuesta cortada por `LLM_MAX_TOKENS` recortada a la última oración completa, con aviso que no pasa al historial. | Prueba real en Telegram: "Vacaciones, extras, equipo" llegó cortada a mitad de palabra porque el modelo razonó hasta agotar el límite (T-54). |
+| 1.6 | 2026-11-07 | CA-R5.8: antes de recortar, un reintento con `LLM_TRUNCATED_RETRY_MAX_TOKENS`; sin oraciones completas se conservan las palabras completas en lugar de responder "no encontrado". | Pedido del autor: la respuesta debe salir completa, y "no encontrado" era falso si el modelo ya había empezado a responder con los documentos (T-55). |
 
 Este registro se completó el 2026-11-07 al revisar la entrega contra el enunciado: las
 versiones 1.1 a 1.4 se habían registrado en `plan.md` y en los commits, pero no aquí.

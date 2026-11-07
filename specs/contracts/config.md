@@ -13,6 +13,7 @@ defecto. Las variables de entorno usan el nombre de la columna "Variable".
 | `LLM_PROVIDER` | `llm.provider` | `anthropic` \| `openai` \| `gemini` | `anthropic` | yaml | CA-R1.4, CA-R1.6 |
 | `LLM_MAX_TOKENS` | `llm.max_tokens` | int 50–4000 | 600 | yaml | RNF-01 |
 | `LLM_REWRITE_MAX_TOKENS` | `llm.rewrite_max_tokens` | int 20–1000 | 100 | yaml | RF-05 |
+| `LLM_TRUNCATED_RETRY_MAX_TOKENS` | `llm.truncated_retry_max_tokens` | int 0–8000; 0 = sin reintento, si no, mayor que `LLM_MAX_TOKENS` | 1200 | yaml | CA-R5.8 |
 | `LLM_TIMEOUT_SECONDS` | `llm.timeout_seconds` | float > 0 (tiempo total, reintentos incluidos) | 30 | yaml | CA-R5.2 |
 | `LLM_MAX_RETRIES` | `llm.max_retries` | int 0–5 | 2 | yaml | CA-R5.1 |
 | `LLM_ANTHROPIC_API_KEY` | — | secreto | — | `.env` | CA-R1.6 |
