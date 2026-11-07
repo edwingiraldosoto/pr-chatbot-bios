@@ -1,0 +1,28 @@
+# Secretos: llegan por env_file, nunca dentro de la imagen.
+.env
+.env.*
+!.env.example
+
+# Datos generados y cachés: viven en el volumen /app/data.
+data/
+models_cache/
+.cache/
+
+# Entorno local, control de versiones y herramientas.
+.git/
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.claude/
+.specify/
+
+# No hacen falta para ejecutar el bot.
+tests/
+specs/
+docs/
+*.log
+~$*

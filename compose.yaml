@@ -1,0 +1,25 @@
+# Ejecución en contenedor (CA-R2.4). Requiere un .env completo en esta carpeta.
+#
+#   docker compose up -d --build
+#   docker compose logs -f bot
+#   docker compose exec bot python -m mesa_ayuda.llm.check          # verificar el LLM
+#   docker compose exec bot python -m scripts.unanswered --salida -  # preguntas sin respuesta
+#   docker compose down
+#
+# No arranques a la vez el bot local y el contenedor con el mismo token: Telegram solo
+# permite un proceso leyendo mensajes por bot.
+
+services:
+  bot:
+    build: .
+    image: mesa-ayuda-bios
+    env_file: .env
+    restart: unless-stopped
+    volumes:
+      # Los documentos se editan en la carpeta del equipo; /reindex los toma sin reconstruir.
+      - ./knowledge_base:/app/knowledge_base:ro
+      # Índice, manifest, SQLite y modelo de embeddings (unos 450 MB la primera vez).
+      - bot-data:/app/data
+
+volumes:
+  bot-data:
