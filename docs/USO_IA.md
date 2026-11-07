@@ -204,3 +204,46 @@ tocar ni desplegar código. El diseño se registró primero (CA-R1.6, R-08, plan
   actual (OK), proveedor sin key (salida 2, nombra la variable), modelo inexistente (404 y
   qué revisar) y Haiku 4.5 con `effort` desactivado (OK). Este último antes exigía cambiar
   código.
+
+### 2026-11-06 — Bot de Telegram (S6: T-26 a T-33, más T-49 a T-53)
+
+**Decisiones propias sobre lo propuesto**:
+- Las pruebas de los manejadores pasan por la `Application` real de python-telegram-bot
+  con un transporte HTTP falso (`tests/telegram_fake.py`), no por objetos simulados. Así
+  se prueban los filtros, los grupos y `ApplicationHandlerStop` como en producción.
+- El filtro común (chat privado, acceso, copias, límite) corre una sola vez en el grupo
+  -1, antes de cualquier comando. Repetir la revisión en cada manejador era el borrador
+  inicial y dejaba fácil olvidar uno.
+- Actualizaciones en paralelo con un candado por usuario: una pregunta lenta no frena a
+  los demás ni a `/reindex` (CA-08.4), y los mensajes de una misma persona no se mezclan
+  en su historial. Hay una prueba para cada mitad.
+- El aviso de límite sale una vez por ventana; sin eso, el bot contestaba a cada mensaje
+  de una ráfaga.
+
+**Pruebas de mutación manuales** (cada fila es un cambio deliberado al código; todas
+hicieron fallar al menos una prueba):
+
+| Mutación | Pruebas que fallan |
+|---|---|
+| Atender chats de grupo | 2 |
+| Saltar el control de acceso | 2 |
+| Mostrar `/reindex` en la ayuda de cualquiera | 1 |
+| Guardar la respuesta con la línea de fuentes en el historial | 1 |
+| Quitar el candado por usuario | 1 |
+| Permitir `/reindex` a no administradores | 1 |
+| Aceptar cualquier código de invitación | 4 |
+| Quitar el tope a los no administradores | 1 |
+
+**Prueba con el bot real** (Telegram y Claude reales):
+- El cliente de Telegram del autor envió 10 copias de un "hola" y el bot respondió 10
+  veces. El log mostró 10 actualizaciones distintas en 0,3 s, así que la causa no estaba
+  en el bot; aun así se agregó el filtro de copias (T-49, CA-R5.7).
+- "hola" terminaba en "No encontré esa información". Ahora recibe un saludo cordial sin
+  llamar al modelo (T-50, CA-06.5).
+- Para que el evaluador pueda escribirle al bot sin dar su ID antes, se agregó el enlace
+  de invitación con topes de costo (T-51 a T-53, CA-07.5, RNF-08). Se probó con una
+  segunda cuenta: acceso denegado antes del enlace, autorizada después, 9 preguntas.
+- Un corte de DNS de 4 minutos dejó 23 trazas registradas como errores de mensaje. Se
+  corrigió en `331f11f`: ahora es una advertencia de una línea.
+- Hallazgo para S8: la reformulación a veces inventa ("Cómo formatear un ocho" se buscó
+  como "¿Cómo se formatea un disco de 8 TB?") o contesta en lugar de reescribir.

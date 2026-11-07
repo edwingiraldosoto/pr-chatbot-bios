@@ -113,14 +113,14 @@ Cambio pedido por el autor el 2026-11-06 (CA-R1.6, plan 1.4):
 
 Cambio pedido por el autor el 2026-11-06 tras la prueba real (CA-R5.7, plan 1.6):
 
-- [ ] T-49 [US3] Filtro de mensajes repetidos por usuario con `DUPLICATE_WINDOW_SECONDS` — `src/mesa_ayuda/guards.py`, `src/mesa_ayuda/bot/handlers.py`, `src/mesa_ayuda/config.py`, `config.yaml`, `.env.example`, `tests/unit/test_guards.py`, `tests/unit/test_handlers.py` — RNF-05 (CA-R5.7)
-- [ ] T-50 [US5] Respuesta cordial a saludos, agradecimientos y despedidas — `src/mesa_ayuda/bot/small_talk.py`, `src/mesa_ayuda/bot/messages.py`, `src/mesa_ayuda/bot/handlers.py`, `tests/unit/test_small_talk.py`, `tests/unit/test_handlers.py` — RF-06 (CA-06.5)
+- [x] T-49 [US3] Filtro de mensajes repetidos por usuario con `DUPLICATE_WINDOW_SECONDS` — `src/mesa_ayuda/guards.py`, `src/mesa_ayuda/bot/handlers.py`, `src/mesa_ayuda/config.py`, `config.yaml`, `.env.example`, `tests/unit/test_guards.py`, `tests/unit/test_handlers.py` — RNF-05 (CA-R5.7)
+- [x] T-50 [US5] Respuesta cordial a saludos, agradecimientos y despedidas — `src/mesa_ayuda/bot/small_talk.py`, `src/mesa_ayuda/bot/messages.py`, `src/mesa_ayuda/bot/handlers.py`, `tests/unit/test_small_talk.py`, `tests/unit/test_handlers.py` — RF-06 (CA-06.5)
 
 Cambio pedido por el autor el 2026-11-06 para la evaluación (CA-07.5, RNF-08, plan 1.8):
 
-- [ ] T-51 Configuración y almacenamiento de invitaciones y uso diario: `INVITE_CODE`, topes y largo máximo; tablas `invited_users` y `daily_usage` con descuento atómico del cupo — `src/mesa_ayuda/config.py`, `src/mesa_ayuda/storage.py`, `config.yaml`, `.env.example`, `tests/unit/test_storage.py`, `tests/unit/test_config.py` — RF-07 (CA-07.5), RNF-08
-- [ ] T-52 Invitación por enlace y comandos `/invitacion`, `/invitados` y `/revocar` — `src/mesa_ayuda/bot/handlers.py`, `src/mesa_ayuda/bot/messages.py`, `tests/unit/test_handlers.py` — RF-07 (CA-07.5)
-- [ ] T-53 Topes diarios y largo máximo en el flujo de pregunta — `src/mesa_ayuda/bot/handlers.py`, `src/mesa_ayuda/bot/messages.py`, `src/mesa_ayuda/__main__.py`, `tests/unit/test_handlers.py` — RNF-08 (CA-R8.1–CA-R8.5)
+- [x] T-51 Configuración y almacenamiento de invitaciones y uso diario: `INVITE_CODE`, topes y largo máximo; tablas `invited_users` y `daily_usage` con descuento atómico del cupo — `src/mesa_ayuda/config.py`, `src/mesa_ayuda/storage.py`, `config.yaml`, `.env.example`, `tests/unit/test_storage.py`, `tests/unit/test_config.py` — RF-07 (CA-07.5), RNF-08
+- [x] T-52 Invitación por enlace y comandos `/invitacion`, `/invitados` y `/revocar` — `src/mesa_ayuda/bot/handlers.py`, `src/mesa_ayuda/bot/messages.py`, `tests/unit/test_handlers.py` — RF-07 (CA-07.5)
+- [x] T-53 Topes diarios y largo máximo en el flujo de pregunta — `src/mesa_ayuda/bot/handlers.py`, `src/mesa_ayuda/bot/messages.py`, `src/mesa_ayuda/__main__.py`, `tests/unit/test_handlers.py` — RNF-08 (CA-R8.1–CA-R8.5)
 
 **Punto de control**: obligatorios RF-01 a RF-07 y deseables RF-08 a RF-10 funcionando en Telegram.
 
@@ -224,15 +224,15 @@ Estado al momento de la entrega (se actualiza al cerrar cada fase).
 | T-27 | RF-07, RNF-05 | S6 | Terminada | `3666f58` |
 | T-28 | RNF-05, RF-12 | S6 | Terminada | `903a978` |
 | T-29 | RF-06 | S6 | Terminada | `1de00bd`, `2b5cb09` |
-| T-30 | RF-03, RNF-05 | S6 | Terminada | `12a7c1b` |
+| T-30 | RF-03, RNF-05 | S6 | Terminada | `12a7c1b`, `331f11f` |
 | T-31 | RF-08 | S6 | Terminada | `1bb7a09` |
 | T-32 | RNF-02 | S6 | Terminada | `10eb774` |
 | T-33 | RF-10 | S6 | Terminada | `151b2f8`, `cea464d` |
-| T-49 | RNF-05 | S6 | Pendiente | — |
-| T-50 | RF-06 | S6 | Pendiente | — |
-| T-51 | RF-07, RNF-08 | S6 | Pendiente | — |
-| T-52 | RF-07 | S6 | Pendiente | — |
-| T-53 | RNF-08 | S6 | Pendiente | — |
+| T-49 | RNF-05 | S6 | Terminada | `4fe8fd2` |
+| T-50 | RF-06 | S6 | Terminada | `ca45488` |
+| T-51 | RF-07, RNF-08 | S6 | Terminada | `ba1b385` |
+| T-52 | RF-07 | S6 | Terminada | `3a7e507` |
+| T-53 | RNF-08 | S6 | Terminada | `ed3d3e3` |
 | T-34 | RF-13 | S7 | Pendiente | — |
 | T-35 | RF-11 | S7 | Pendiente | — |
 | T-36 | RNF-02 | S7 | Pendiente | — |
