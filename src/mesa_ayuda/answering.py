@@ -8,8 +8,10 @@
 4. Se leen los marcadores ``[n]`` de la respuesta: se quitan del texto y las fuentes se
    construyen con los metadatos del índice de esos fragmentos, nunca con nombres escritos
    por el modelo (CA-03.1–CA-03.3).
-5. Si el modelo se detuvo por ``LLM_MAX_TOKENS``, la respuesta se recorta a la última
-   oración completa y se avisa al usuario; nunca termina a mitad de una palabra.
+5. Si el modelo se detuvo por ``LLM_MAX_TOKENS``, se repite la llamada una vez con
+   ``LLM_TRUNCATED_RETRY_MAX_TOKENS`` para que la respuesta salga completa (CA-R5.8). Si
+   también se corta, se recorta a la última oración completa (o, si no hay ninguna, a la
+   última palabra completa) y se avisa al usuario; nunca termina a mitad de una palabra.
 
 Los errores del proveedor (:class:`~mesa_ayuda.llm.base.LLMError`) se propagan: el bot los
 convierte en mensajes para el usuario (RNF-05).
@@ -178,6 +180,18 @@ def complete_sentences(text: str) -> str:
     return text[: ends[-1]].rstrip() if ends else ""
 
 
+def complete_words(text: str) -> str:
+    """Texto sin la última palabra (cortada), terminado en ``…`` (``""`` si no queda nada)."""
+    head, _, _ = text.rstrip().rpartition(" ")
+    head = head.rstrip(" ,;:-–—")
+    return f"{head}…" if head else ""
+
+
+def trim_truncated(text: str) -> str:
+    """Respuesta cortada sin la parte incompleta: oraciones completas o, si no hay, palabras."""
+    return complete_sentences(text) or complete_words(text)
+
+
 def unique_sources(hits: Sequence[SearchHit]) -> list[Source]:
     """Fuentes de los fragmentos, sin repetir, conservando el orden."""
     return list(dict.fromkeys(Source.from_hit(hit) for hit in hits))
@@ -193,6 +207,9 @@ class AnswerService:
         system_prompt: Contenido de ``SYSTEM_PROMPT_PATH``.
         max_tokens: ``LLM_MAX_TOKENS``. La temperatura y los demás parámetros del modelo
             son del perfil del proveedor (:attr:`Settings.llm`).
+        retry_max_tokens: ``LLM_TRUNCATED_RETRY_MAX_TOKENS``: límite del único reintento
+            cuando la respuesta se corta por ``max_tokens``. 0 (o un valor no mayor que
+            ``max_tokens``) desactiva el reintento.
     """
 
     def __init__(
@@ -203,12 +220,14 @@ class AnswerService:
         rewriter: QuestionRewriter,
         system_prompt: str,
         max_tokens: int,
+        retry_max_tokens: int = 0,
     ) -> None:
         self._retriever = retriever
         self._provider = provider
         self._rewriter = rewriter
         self._system_prompt = system_prompt
         self._max_tokens = max_tokens
+        self._retry_max_tokens = retry_max_tokens
 
     async def answer(self, question: str, history: Sequence[ChatMessage] = ()) -> Answer:
         """Responde una pregunta con fuentes, o indica que no se encontró."""
@@ -248,24 +267,37 @@ class AnswerService:
 
         hits = retrieval.relevant
         prompt = build_answer_prompt(self._system_prompt, question, hits, history)
-        result = await self._provider.complete(
-            prompt.system,
-            prompt.messages,
-            max_tokens=self._max_tokens,
-        )
+        limit = self._max_tokens
+        result = await self._provider.complete(prompt.system, prompt.messages, max_tokens=limit)
         usage = Usage(
             usage.input_tokens + result.input_tokens,
             usage.output_tokens + result.output_tokens,
             usage.llm_calls + 1,
         )
+        if result.truncated and self._retry_max_tokens > self._max_tokens:
+            # Una respuesta cortada es peor que una llamada más: se repite una sola vez con
+            # más margen, así el costo del peor caso sigue acotado (CA-R5.8).
+            log.warning(
+                "answer_truncated_retry",
+                output_tokens=result.output_tokens,
+                max_tokens=limit,
+                retry_max_tokens=self._retry_max_tokens,
+            )
+            limit = self._retry_max_tokens
+            result = await self._provider.complete(prompt.system, prompt.messages, max_tokens=limit)
+            usage = Usage(
+                usage.input_tokens + result.input_tokens,
+                usage.output_tokens + result.output_tokens,
+                usage.llm_calls + 1,
+            )
 
         text = result.text
         if result.truncated:
-            text = complete_sentences(text)
+            text = trim_truncated(text)
             log.warning(
                 "answer_truncated",
                 output_tokens=result.output_tokens,
-                max_tokens=self._max_tokens,
+                max_tokens=limit,
                 kept_chars=len(text),
             )
         citations = extract_citations(text, len(hits))

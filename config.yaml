@@ -24,6 +24,10 @@ llm:
   max_tokens: 600
   # LLM_REWRITE_MAX_TOKENS: máximo de tokens al reformular una pregunta de seguimiento.
   rewrite_max_tokens: 100
+  # LLM_TRUNCATED_RETRY_MAX_TOKENS: si una respuesta se corta por max_tokens, se repite una
+  # sola vez con este límite para que salga completa. 0 = sin reintento. Debe ser mayor
+  # que max_tokens.
+  truncated_retry_max_tokens: 1200
   # LLM_TIMEOUT_SECONDS: tiempo total de espera por respuesta, reintentos incluidos.
   timeout_seconds: 30
   # LLM_MAX_RETRIES: reintentos ante errores transitorios (429, 5xx, red).

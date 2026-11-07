@@ -47,6 +47,7 @@ YAML_PATHS: dict[str, tuple[str, str]] = {
     "llm_temperature": ("llm", "temperature"),
     "llm_max_tokens": ("llm", "max_tokens"),
     "llm_rewrite_max_tokens": ("llm", "rewrite_max_tokens"),
+    "llm_truncated_retry_max_tokens": ("llm", "truncated_retry_max_tokens"),
     "llm_timeout_seconds": ("llm", "timeout_seconds"),
     "llm_max_retries": ("llm", "max_retries"),
     "llm_anthropic_model": ("anthropic", "model"),
@@ -214,6 +215,8 @@ class Settings(BaseSettings):
     llm_provider: LLMProviderName = "anthropic"
     llm_max_tokens: int = Field(600, ge=50, le=4000)
     llm_rewrite_max_tokens: int = Field(100, ge=20, le=1000)
+    #: Límite del único reintento de una respuesta cortada (CA-R5.8); 0 = sin reintento.
+    llm_truncated_retry_max_tokens: int = Field(1200, ge=0, le=8000)
     llm_timeout_seconds: float = Field(30.0, gt=0)
     llm_max_retries: int = Field(2, ge=0, le=5)
 
@@ -354,6 +357,17 @@ class Settings(BaseSettings):
             raise ValueError(
                 f"Falta la API key de {provider}: define LLM_{provider.upper()}_API_KEY "
                 "(o LLM_API_KEY) en .env (ver .env.example)"
+            )
+        return self
+
+    @model_validator(mode="after")
+    def _check_truncated_retry(self) -> Settings:
+        # Reintentar con el mismo límite (o menos) se cortaría igual: solo gasta otra llamada.
+        retry = self.llm_truncated_retry_max_tokens
+        if retry and retry <= self.llm_max_tokens:
+            raise ValueError(
+                f"LLM_TRUNCATED_RETRY_MAX_TOKENS ({retry}) debe ser 0 o mayor que "
+                f"LLM_MAX_TOKENS ({self.llm_max_tokens})"
             )
         return self
 

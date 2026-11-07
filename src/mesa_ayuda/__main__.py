@@ -96,6 +96,7 @@ def build(
         ),
         system_prompt=settings.system_prompt_path.read_text(encoding="utf-8"),
         max_tokens=settings.llm_max_tokens,
+        retry_max_tokens=settings.llm_truncated_retry_max_tokens,
     )
     storage = Storage(settings.data_dir / "bot.sqlite3", history_length=settings.history_length)
     handlers = BotHandlers(

@@ -71,7 +71,13 @@ class StaticSearch:
         return self.hits[:top_k]
 
 
-def service(fake: FakeProvider, hits: list[SearchHit], *, threshold: float = 0.80) -> AnswerService:
+def service(
+    fake: FakeProvider,
+    hits: list[SearchHit],
+    *,
+    threshold: float = 0.80,
+    retry_max_tokens: int = 0,
+) -> AnswerService:
     retriever = Retriever(FakeEmbedder(), StaticSearch(hits), top_k=5, threshold=threshold)
     return AnswerService(
         retriever=retriever,
@@ -79,6 +85,7 @@ def service(fake: FakeProvider, hits: list[SearchHit], *, threshold: float = 0.8
         rewriter=QuestionRewriter(fake, "REESCRIBE"),
         system_prompt="SISTEMA",
         max_tokens=600,
+        retry_max_tokens=retry_max_tokens,
     )
 
 
@@ -307,11 +314,60 @@ async def test_truncated_answer_never_ends_mid_word() -> None:
     assert any(log["event"] == "answer_truncated" for log in logs)
 
 
-async def test_truncated_answer_without_a_complete_sentence_is_not_found() -> None:
-    fake = FakeProvider(replies=[truncated("Sobre vacaciones, la empresa programa vac")])
+async def test_truncated_answer_without_a_complete_sentence_keeps_the_complete_words() -> None:
+    # Hay información (el modelo empezó a responder): decir "no encontrado" sería falso.
+    fake = FakeProvider(replies=[truncated("Sobre vacaciones [1], la empresa programa vac")])
+
+    answer = await service(fake, [VACATIONS]).answer("Vacaciones, extras, equipo")
+
+    assert answer.found
+    assert answer.truncated
+    assert answer.text == "Sobre vacaciones, la empresa programa…"
+    assert answer.sources == [Source("politica_vacaciones.md", "2. Días de vacaciones")]
+
+
+async def test_truncated_answer_is_retried_once_with_the_larger_limit() -> None:
+    fake = FakeProvider(
+        replies=[
+            truncated("Sobre vacaciones, la empresa programa vac"),
+            "Tienes 15 días hábiles [1]. Las colectivas se descuentan del saldo [1].",
+        ]
+    )
 
     with structlog.testing.capture_logs() as logs:
-        answer = await service(fake, [VACATIONS]).answer("Vacaciones, extras, equipo")
+        answer = await service(fake, [VACATIONS], retry_max_tokens=1200).answer(
+            "Vacaciones, extras, equipo"
+        )
 
-    assert answer.outcome is Outcome.LLM_NOT_FOUND
-    assert any(log["event"] == "answer_truncated" for log in logs)
+    assert [call.max_tokens for call in fake.calls] == [600, 1200]
+    assert fake.calls[0].messages == fake.calls[1].messages  # la misma pregunta
+    assert answer.found and not answer.truncated
+    assert answer.text == "Tienes 15 días hábiles. Las colectivas se descuentan del saldo."
+    assert TRUNCATED_NOTE not in answer.render()
+    assert answer.usage.llm_calls == 2
+    assert answer.usage.output_tokens > 600  # se suman las dos llamadas
+    assert any(log["event"] == "answer_truncated_retry" for log in logs)
+
+
+async def test_retry_that_is_also_cut_falls_back_to_complete_sentences() -> None:
+    fake = FakeProvider(
+        replies=[
+            truncated("Para pedir vac"),
+            truncated("Tienes 15 días hábiles [1]. Para pedir vac"),
+        ]
+    )
+
+    answer = await service(fake, [VACATIONS], retry_max_tokens=1200).answer("Vacaciones")
+
+    assert len(fake.calls) == 2  # un solo reintento
+    assert answer.truncated
+    assert answer.text == "Tienes 15 días hábiles."
+
+
+async def test_without_retry_limit_a_truncated_answer_is_not_retried() -> None:
+    fake = FakeProvider(replies=[truncated("Tienes 15 días hábiles [1]. Para pedir vac")])
+
+    answer = await service(fake, [VACATIONS], retry_max_tokens=0).answer("Vacaciones")
+
+    assert len(fake.calls) == 1
+    assert answer.text == "Tienes 15 días hábiles."

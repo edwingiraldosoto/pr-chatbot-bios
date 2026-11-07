@@ -174,6 +174,33 @@ def test_overlap_must_be_smaller_than_chunk_size(
         load_settings(path, env_file=None)
 
 
+def test_truncated_retry_limit_defaults_to_twice_the_answer_limit(
+    secrets_env: dict[str, str],
+) -> None:
+    settings = load_settings(REPO_ROOT / "config.yaml", env_file=None)
+
+    assert (settings.llm_max_tokens, settings.llm_truncated_retry_max_tokens) == (600, 1200)
+
+
+def test_truncated_retry_limit_must_exceed_the_answer_limit(
+    config_dir: Path, secrets_env: dict[str, str]
+) -> None:
+    path = write_yaml(config_dir, {"llm": {"max_tokens": 600, "truncated_retry_max_tokens": 600}})
+
+    with pytest.raises(ConfigError, match="LLM_TRUNCATED_RETRY_MAX_TOKENS"):
+        load_settings(path, env_file=None)
+
+
+def test_truncated_retry_can_be_disabled_with_zero(
+    config_dir: Path, secrets_env: dict[str, str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("LLM_TRUNCATED_RETRY_MAX_TOKENS", "0")
+
+    settings = load_settings(config_dir / "config.yaml", env_file=None)
+
+    assert settings.llm_truncated_retry_max_tokens == 0
+
+
 def test_user_ids_accept_csv_and_admins_are_authorized(
     config_dir: Path, secrets_env: dict[str, str], monkeypatch: pytest.MonkeyPatch
 ) -> None:

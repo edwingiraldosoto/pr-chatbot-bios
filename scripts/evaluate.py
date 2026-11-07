@@ -407,6 +407,7 @@ def build_service(
         ),
         system_prompt=settings.system_prompt_path.read_text(encoding="utf-8"),
         max_tokens=settings.llm_max_tokens,
+        retry_max_tokens=settings.llm_truncated_retry_max_tokens,
     )
     return service, retriever, indexer
 
