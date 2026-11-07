@@ -462,6 +462,34 @@ que antes pasaba. La búsqueda acertó y el modelo respondió `NO_ENCONTRADO`; a
 veces pasó las 5. Lo dejé registrado como fallo en `docs/EVALUACION.md`, en lugar de
 repetir la ejecución completa hasta que saliera perfecta.
 
+### 2026-11-07 — Respuestas cortadas y revisión contra el enunciado (S11: T-54)
+
+**Qué pasó**: en Telegram, "Vacaciones, extras, equipo" llegó cortada a mitad de palabra.
+El log mostró `stop_reason: max_tokens`: Haiku 5.5 razonaba aunque tuviera `effort: low`.
+La corrección (`4333ac2`) envía `thinking: disabled` y recorta a la última oración completa.
+Ese commit salió sin la referencia a una tarea, así que después se creó T-54 y se enlazó en
+`specs/tasks.md`.
+
+**Revisión con Claude Code (Opus 5.5)** de todo el repositorio contra el enunciado y las
+notas de diseño. Le pedí comparar cada sección de la rúbrica con lo entregado y buscar
+errores en el código. Encontró:
+- **Un error en la corrección:** el aviso "La respuesta quedó incompleta…" se agregaba a
+  `Answer.text`, que es lo que se guarda en el historial, así que volvía al modelo en la
+  siguiente pregunta. Se escribió primero la prueba que fallaba y luego el arreglo:
+  `Answer.truncated`, con el aviso solo en `render()` (`fcc8bae`).
+- **Trazabilidad incompleta:** el registro de cambios de `spec.md` solo tenía la versión
+  1.0, aunque CA-R1.6, CA-R5.7, CA-06.5, CA-07.5 y RNF-08 se agregaron después. Además,
+  `tasks.md` decía "este commit" en lugar del hash en T-39, T-44 y T-45. Se completaron
+  los dos.
+- **Evaluación desactualizada:** las cifras de `EVALUACION.md` eran anteriores a
+  `thinking: disabled`. Se repitió: 30 de 30, con un 16 % menos de tokens de salida.
+
+**Qué revisé yo**: leí las respuestas nuevas de la evaluación, en especial `seg_portatil`
+y `ref_pc`. No di por superado el fallo anterior de `seg_portatil` por un solo intento
+exitoso. Confirmé que la afirmación "ninguna respuesta cortada" tuviera respaldo en los
+datos: la cambié por la cifra medida (máximo 280 tokens de 600), porque los logs de esa
+ejecución no quedaron guardados.
+
 ### 2026-11-07 — Verificación final (S10: T-45)
 
 Resultados tal cual:
