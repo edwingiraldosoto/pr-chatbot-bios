@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import sqlite3
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import pytest
 
 from mesa_ayuda.llm.base import ChatMessage
-from mesa_ayuda.storage import Storage
+from mesa_ayuda.storage import Quota, Storage
 
 
 @pytest.fixture
@@ -152,3 +153,106 @@ def test_invalid_reason_is_rejected_by_the_schema(db: Path) -> None:
 def test_negative_history_length_is_rejected(db: Path) -> None:
     with pytest.raises(ValueError, match="negativo"):
         Storage(db, history_length=-1)
+
+
+# --- Invitados (T-51; CA-07.5) --------------------------------------------------------------
+
+
+def test_invited_user_stays_authorized_after_a_restart(db: Path) -> None:
+    first = Storage(db, history_length=6)
+    first.invite(42, first_name="Luis", code_hash="hash-a")
+    first.close()
+
+    second = Storage(db, history_length=6)
+
+    assert second.is_invited(42, "hash-a")
+    assert not second.is_invited(43, "hash-a")
+
+
+def test_changing_the_code_leaves_old_invitees_out(db: Path) -> None:
+    storage = Storage(db, history_length=6)
+    storage.invite(42, first_name="Luis", code_hash="hash-viejo")
+
+    assert not storage.is_invited(42, "hash-nuevo")
+    assert storage.invited_users("hash-nuevo", day="2026-11-06") == []
+
+    storage.invite(42, first_name="Luis", code_hash="hash-nuevo")  # vuelve con el enlace nuevo
+    assert storage.is_invited(42, "hash-nuevo")
+
+
+def test_revoke(db: Path) -> None:
+    storage = Storage(db, history_length=6)
+    storage.invite(42, first_name="Luis", code_hash="h")
+
+    assert storage.revoke(42) is True
+    assert not storage.is_invited(42, "h")
+    assert storage.revoke(42) is False
+
+
+def test_invited_users_shows_todays_questions(db: Path) -> None:
+    storage = Storage(db, history_length=6)
+    storage.invite(42, first_name="Luis", code_hash="h")
+    storage.invite(43, first_name="Ana", code_hash="h")
+    storage.invite(44, first_name="Viejo", code_hash="otro")
+    for _ in range(3):
+        storage.take_question(42, day="2026-11-06", user_limit=50, total_limit=300)
+    storage.take_question(42, day="2026-11-05", user_limit=50, total_limit=300)
+
+    rows = storage.invited_users("h", day="2026-11-06")
+
+    assert {(r.user_id, r.first_name, r.questions_today) for r in rows} == {
+        (42, "Luis", 3),
+        (43, "Ana", 0),
+    }
+
+
+# --- Uso diario (T-51; RNF-08) --------------------------------------------------------------
+
+
+def test_user_limit_is_per_day(db: Path) -> None:
+    # CA-R8.1
+    storage = Storage(db, history_length=6)
+    day = "2026-11-06"
+
+    results = [storage.take_question(1, day=day, user_limit=2, total_limit=100) for _ in range(3)]
+
+    assert results == [Quota.OK, Quota.OK, Quota.USER_LIMIT]
+    assert storage.take_question(2, day=day, user_limit=2, total_limit=100) is Quota.OK
+    assert storage.take_question(1, day="2026-11-07", user_limit=2, total_limit=100) is Quota.OK
+    assert storage.questions_on(day) == 3  # el rechazado no cuenta
+
+
+def test_total_limit_applies_to_everyone(db: Path) -> None:
+    # CA-R8.2
+    storage = Storage(db, history_length=6)
+    day = "2026-11-06"
+    storage.take_question(1, day=day, user_limit=10, total_limit=2)
+    storage.take_question(2, day=day, user_limit=10, total_limit=2)
+
+    assert storage.take_question(3, day=day, user_limit=10, total_limit=2) is Quota.TOTAL_LIMIT
+
+
+def test_admins_have_no_limit_but_count_in_the_total(db: Path) -> None:
+    # CA-R8.4
+    storage = Storage(db, history_length=6)
+    day = "2026-11-06"
+    for _ in range(5):
+        assert storage.take_question(9, day=day, user_limit=None, total_limit=None) is Quota.OK
+
+    assert storage.questions_on(day) == 5
+    assert storage.take_question(1, day=day, user_limit=10, total_limit=5) is Quota.TOTAL_LIMIT
+
+
+def test_simultaneous_requests_never_exceed_the_limit(db: Path) -> None:
+    # El descuento es atómico: 20 hilos compitiendo por 7 cupos dejan exactamente 7.
+    storage = Storage(db, history_length=6)
+    day = "2026-11-06"
+
+    def take(user: int) -> Quota:
+        return storage.take_question(user, day=day, user_limit=100, total_limit=7)
+
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        results = list(pool.map(take, range(20)))
+
+    assert results.count(Quota.OK) == 7
+    assert storage.questions_on(day) == 7

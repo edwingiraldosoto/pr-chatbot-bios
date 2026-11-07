@@ -112,6 +112,14 @@ access:
   # estos segundos se responde una sola vez (copias que reenvía el cliente de
   # Telegram o un Enter repetido). 0 = desactivado.
   duplicate_window_seconds: 5
+  # Control de costo (RNF-08). Los administradores no tienen tope, pero cuentan en el
+  # total; saludos, copias y comandos no cuentan. El día va en REINDEX_TIMEZONE.
+  # DAILY_QUESTIONS_PER_USER: preguntas al modelo por usuario por día.
+  daily_questions_per_user: 50
+  # DAILY_QUESTIONS_TOTAL: preguntas al modelo de todos los usuarios por día.
+  daily_questions_total: 300
+  # MAX_QUESTION_CHARS: largo máximo de una pregunta; más largas se rechazan.
+  max_question_chars: 1000
 
 logging:
   # LOG_LEVEL: DEBUG | INFO | WARNING | ERROR.

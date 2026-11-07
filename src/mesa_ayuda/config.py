@@ -72,6 +72,9 @@ YAML_PATHS: dict[str, tuple[str, str]] = {
     "admin_user_ids": ("access", "admin_user_ids"),
     "rate_limit_per_minute": ("access", "rate_limit_per_minute"),
     "duplicate_window_seconds": ("access", "duplicate_window_seconds"),
+    "daily_questions_per_user": ("access", "daily_questions_per_user"),
+    "daily_questions_total": ("access", "daily_questions_total"),
+    "max_question_chars": ("access", "max_question_chars"),
     "log_level": ("logging", "level"),
     "log_questions": ("logging", "log_questions"),
     "data_dir": ("storage", "data_dir"),
@@ -89,6 +92,7 @@ SECRET_FIELDS = (
     "llm_anthropic_api_key",
     "llm_openai_api_key",
     "llm_gemini_api_key",
+    "invite_code",
 )
 
 LLMProviderName = Literal["anthropic", "openai", "gemini"]
@@ -120,6 +124,7 @@ OPTIONAL_FIELDS = (
 PATH_FIELDS = ("knowledge_base_path", "system_prompt_path", "rewrite_prompt_path", "data_dir")
 
 _SCHEDULE_RE = re.compile(r"^([01]\d|2[0-3]):([0-5]\d)$")
+_INVITE_RE = re.compile(r"[A-Za-z0-9_-]{12,64}")
 
 # Valores planos leídos de config.yaml para la carga en curso. Se pasan por ContextVar
 # porque pydantic-settings construye las fuentes en un classmethod sin argumentos propios.
@@ -200,6 +205,8 @@ class Settings(BaseSettings):
     llm_gemini_api_key: SecretStr | None = None
     #: Genérica del enunciado: API key del proveedor activo si no tiene la suya.
     llm_api_key: SecretStr | None = None
+    #: Código del enlace de invitación ``t.me/<bot>?start=<código>`` (CA-07.5).
+    invite_code: SecretStr | None = None
 
     # --- Modelo de lenguaje: comunes a todos los proveedores ---
     llm_provider: LLMProviderName = "anthropic"
@@ -247,6 +254,9 @@ class Settings(BaseSettings):
     admin_user_ids: UserIds = Field(default_factory=list)
     rate_limit_per_minute: int = Field(10, ge=1)
     duplicate_window_seconds: float = Field(5.0, ge=0.0, le=60.0)
+    daily_questions_per_user: int = Field(50, ge=1, le=10_000)
+    daily_questions_total: int = Field(300, ge=1, le=100_000)
+    max_question_chars: int = Field(1000, ge=50, le=4000)
 
     # --- Logs y almacenamiento ---
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
@@ -320,6 +330,17 @@ class Settings(BaseSettings):
     def _secret_not_blank(cls, value: SecretStr) -> SecretStr:
         if not value.get_secret_value().strip():
             raise ValueError("no puede estar vacío")
+        return value
+
+    @field_validator("invite_code")
+    @classmethod
+    def _check_invite_code(cls, value: SecretStr | None) -> SecretStr | None:
+        # Telegram solo acepta A-Z, a-z, 0-9, _ y - en el parámetro ?start= (hasta 64).
+        if value is not None and not _INVITE_RE.fullmatch(value.get_secret_value()):
+            raise ValueError(
+                "debe tener de 12 a 64 caracteres, solo letras sin tilde, números, _ y - "
+                "(ejemplo: bios-evaluacion-7Kq2xZ)"
+            )
         return value
 
     @model_validator(mode="after")

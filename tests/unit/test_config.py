@@ -284,3 +284,43 @@ def test_duplicate_window_default_override_and_range(
     monkeypatch.setenv("DUPLICATE_WINDOW_SECONDS", "120")
     with pytest.raises(ConfigError, match="DUPLICATE_WINDOW_SECONDS"):
         load_settings(config_dir / "config.yaml", env_file=None)
+
+
+def test_invite_code_is_optional_secret_and_validated(
+    secrets_env: dict[str, str], config_dir: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # CA-07.5: sin código no hay invitaciones; con código, se redacta en los logs.
+    assert load_settings(config_dir / "config.yaml", env_file=None).invite_code is None
+
+    monkeypatch.setenv("INVITE_CODE", "bios-evaluacion-7Kq2xZ")
+    settings = load_settings(config_dir / "config.yaml", env_file=None)
+    assert settings.invite_code is not None
+    assert "bios-evaluacion-7Kq2xZ" in settings.secret_values()
+
+    for bad in ("corto", "con espacio y tilde á", "x" * 65):
+        monkeypatch.setenv("INVITE_CODE", bad)
+        with pytest.raises(ConfigError, match=r"INVITE_CODE.*12 a 64 caracteres"):
+            load_settings(config_dir / "config.yaml", env_file=None)
+
+
+def test_invite_code_in_yaml_is_rejected(secrets_env: dict[str, str], config_dir: Path) -> None:
+    (config_dir / "config.yaml").write_text("invite_code: bios-evaluacion-7Kq2xZ\n", "utf-8")
+
+    with pytest.raises(ConfigError):
+        load_settings(config_dir / "config.yaml", env_file=None)
+
+
+def test_cost_limits_defaults_and_ranges(
+    secrets_env: dict[str, str], config_dir: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # RNF-08
+    settings = load_settings(config_dir / "config.yaml", env_file=None)
+    assert (
+        settings.daily_questions_per_user,
+        settings.daily_questions_total,
+        settings.max_question_chars,
+    ) == (50, 300, 1000)
+
+    monkeypatch.setenv("DAILY_QUESTIONS_TOTAL", "0")
+    with pytest.raises(ConfigError, match="DAILY_QUESTIONS_TOTAL"):
+        load_settings(config_dir / "config.yaml", env_file=None)
