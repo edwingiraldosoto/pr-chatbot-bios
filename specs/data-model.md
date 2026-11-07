@@ -28,7 +28,8 @@ Colección creada con `metadata={"hnsw:space": "cosine"}`. Similitud = `1 − di
     "embedding_provider": "local",
     "embedding_model": "intfloat/multilingual-e5-small",
     "chunk_size": 800,
-    "chunk_overlap": 150
+    "chunk_overlap": 150,
+    "injection_check": "warn"
   },
   "collection": "kb_1",
   "documents": {
@@ -47,6 +48,11 @@ Colección creada con `metadata={"hnsw:space": "cosine"}`. Similitud = `1 − di
 - `status` ∈ `indexed` | `unreadable` | `quarantined`. Solo `indexed` aporta `doc_key`
   activos a la búsqueda y aparece en `/fuentes`.
 - Escritura atómica: se escribe `manifest.json.tmp` y se reemplaza con `os.replace`.
+- `injection_check` está en `settings` porque cambiar de `warn` a `quarantine` (o al revés)
+  debe volver a revisar todos los documentos, no solo los modificados (RF-13).
+- Con `warn`, cada hallazgo queda en `warnings` como `"<página o sección>: texto que
+  parece una instrucción al asistente (\"<frase>\")"`; con `quarantine` el documento
+  queda `quarantined` con el mismo texto y `/reindex` lo informa en "En cuarentena".
 - Si `settings` difiere de la configuración actual, o el archivo falta o no se puede leer,
   se hace reconstrucción completa en una colección nueva (`kb_<n+1>`) y se borra la anterior.
 
