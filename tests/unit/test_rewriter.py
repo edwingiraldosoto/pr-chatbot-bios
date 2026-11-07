@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
 from mesa_ayuda.llm.base import ChatMessage, LLMTimeoutError, LLMUnavailableError
@@ -93,3 +95,38 @@ async def test_unchanged_question_is_not_marked_as_rewritten() -> None:
     )
 
     assert not result.rewritten
+
+
+@pytest.mark.parametrize(
+    "reply",
+    [
+        # Visto en S8: el modelo pidió aclaración en lugar de reescribir.
+        "Formatear ¿qué? Ese mensaje no permite reescribir una pregunta autónoma.",
+        "¿Qué quieres formatear? Puede ser un equipo o un documento.",
+    ],
+)
+async def test_output_that_is_not_a_single_question_falls_back(reply: str) -> None:
+    result = await QuestionRewriter(FakeProvider(replies=[reply]), "R").rewrite(
+        "Formatear", HISTORY
+    )
+
+    assert (result.question, result.rewritten, result.called) == ("Formatear", False, True)
+
+
+async def test_question_mark_at_the_end_is_fine() -> None:
+    result = await QuestionRewriter(
+        FakeProvider(replies=["¿Se pueden acumular las vacaciones?"]), "R"
+    ).rewrite("¿y se acumulan?", HISTORY)
+
+    assert result.rewritten
+
+
+def test_repository_prompt_keeps_unrelated_questions_as_they_are() -> None:
+    # Contrato de S8 (specs/contracts/prompt.md): la regla conservadora está en el prompt.
+    prompt = (Path(__file__).resolve().parents[2] / "prompts" / "rewrite_prompt.md").read_text(
+        encoding="utf-8"
+    )
+
+    assert "devuelve la pregunta exactamente igual" in prompt
+    assert "Nunca agregues cifras" in prompt
+    assert "no pidas aclaraciones" in prompt

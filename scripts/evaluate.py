@@ -155,12 +155,14 @@ _GLUE = {
 _WORD = re.compile(r"\w{4,}")
 
 
-def invented_words(case: Case, search_question: str) -> list[str]:
-    """Palabras de contenido de la búsqueda que no salen de la pregunta ni del historial.
+def invented_words(case: Case, search_question: str, answers: Sequence[str] = ()) -> list[str]:
+    """Palabras de contenido de la búsqueda que no salen de la conversación.
 
-    Se compara por raíz (5 letras), para aceptar "formateo" si el usuario dijo "formatear".
+    La conversación son la pregunta, las preguntas anteriores y las respuestas anteriores
+    del asistente. Se compara por raíz (5 letras), para aceptar "formateo" si el usuario dijo
+    "formatear".
     """
-    known = normalize(" ".join([case.question, *case.history]))
+    known = normalize(" ".join([case.question, *case.history, *answers]))
     roots = {word[:5] for word in _WORD.findall(known)}
     return [
         word
@@ -169,7 +171,9 @@ def invented_words(case: Case, search_question: str) -> list[str]:
     ]
 
 
-def check(case: Case, answer: Answer, expected_rank: int | None) -> tuple[bool, list[str]]:
+def check(
+    case: Case, answer: Answer, expected_rank: int | None, history_answers: Sequence[str] = ()
+) -> tuple[bool, list[str]]:
     """Aplica los criterios del tipo de caso; devuelve si pasó y por qué no."""
     reasons: list[str] = []
     text = normalize(answer.text)
@@ -189,7 +193,7 @@ def check(case: Case, answer: Answer, expected_rank: int | None) -> tuple[bool, 
         if normalize(word) in text:
             reasons.append(f"contiene {word!r}")
     if case.no_invention:
-        invented = invented_words(case, answer.search_question)
+        invented = invented_words(case, answer.search_question, history_answers)
         if invented:
             reasons.append(f"la búsqueda inventó {invented} ({answer.search_question!r})")
     del expected_rank  # se reporta, pero no decide: lo que importa es la respuesta
@@ -319,7 +323,7 @@ async def run_case(case: Case, service: AnswerService, retriever: Retriever) -> 
     answer = await service.answer(case.question, history)
     latency = round((time.perf_counter() - start) * 1000)
     rank, _ = await asyncio.to_thread(_expected_rank, case, retriever, answer.search_question)
-    passed, reasons = check(case, answer, rank)
+    passed, reasons = check(case, answer, rank, history_answers)
     return CaseResult(
         id=case.id,
         kind=case.kind,

@@ -69,12 +69,29 @@ class QuestionRewriter:
             return Rewrite(question=question, rewritten=False, called=True)
 
         candidate = _clean(result.text)
-        if not candidate or len(candidate) > max(300, 3 * len(question)):
-            log.warning("rewrite_discarded", length=len(candidate))
+        reason = _discard_reason(candidate, question)
+        if reason:
+            log.warning("rewrite_discarded", reason=reason, length=len(candidate))
             return Rewrite(question, False, result.input_tokens, result.output_tokens, called=True)
         return Rewrite(
             candidate, candidate != question, result.input_tokens, result.output_tokens, called=True
         )
+
+
+def _discard_reason(candidate: str, question: str) -> str:
+    """Por qué no sirve la reformulación (``""`` si sirve).
+
+    Visto en S8: a veces el modelo contesta o pide aclaración ("Formatear ¿qué? Ese mensaje
+    no permite…") en lugar de reescribir. Una pregunta reescrita termina en su "?".
+    """
+    if not candidate:
+        return "vacía"
+    if len(candidate) > max(300, 3 * len(question)):
+        return "demasiado larga"
+    _, mark, after = candidate.partition("?")
+    if mark and any(char.isalnum() for char in after):
+        return "no es una sola pregunta"
+    return ""
 
 
 def _clean(text: str) -> str:
