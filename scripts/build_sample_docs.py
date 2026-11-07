@@ -1,7 +1,7 @@
 """Genera los documentos de ejemplo binarios de ``knowledge_base/`` (PDF y DOCX).
 
 El ``.md`` y el ``.txt`` se editan a mano. Este script deja reproducibles los otros dos:
-``python -m scripts.build_sample_docs``. El contenido es ficticio (empresa GrupoBios)
+``python -m scripts.build_sample_docs``. El contenido es ficticio (empresa Nubeverde S.A.S.)
 y se redactó con ayuda de IA (ver ``docs/USO_IA.md``).
 """
 
@@ -18,7 +18,7 @@ KNOWLEDGE_BASE = Path(__file__).resolve().parents[1] / "knowledge_base"
 
 REIMBURSEMENT_PAGES = [
     """POLÍTICA DE REEMBOLSO DE GASTOS
-GrupoBios (contenido ficticio de ejemplo) - Código FIN-POL-002 - Vigente desde el 1 de enero de 2026
+Nubeverde S.A.S. (empresa ficticia) - Código FIN-POL-002 - Vigente desde el 1 de enero de 2026
 Responsable: Dirección Financiera
 
 1. OBJETIVO
@@ -39,7 +39,7 @@ Los gastos que superen el tope solo se reembolsan con aprobación escrita de la 
 5. ANTICIPOS
 Para viajes de más de 2 días se puede pedir un anticipo de hasta el 70 % del presupuesto estimado. El anticipo se legaliza con el mismo formulario de reembolso y el saldo a favor de la empresa se descuenta de la nómina siguiente.""",
     """6. CÓMO SOLICITAR EL REEMBOLSO
-Paso 1: Reúne las facturas electrónicas a nombre de GrupoBios, NIT 900.000.000-1. No se aceptan tiquetes de máquina registradora ni cuentas de cobro sin factura.
+Paso 1: Reúne las facturas electrónicas a nombre de Nubeverde S.A.S., NIT 900.000.000-1. No se aceptan tiquetes de máquina registradora ni cuentas de cobro sin factura.
 Paso 2: Diligencia el formulario de reembolso en el portal Mi Nube, menú "Finanzas" > "Reembolsos", y adjunta las facturas en PDF.
 Paso 3: Envía la solicitud a más tardar 30 días calendario después de la fecha del gasto. Las solicitudes posteriores se rechazan.
 Paso 4: Tu jefe inmediato aprueba la solicitud y luego la revisa Contabilidad.
@@ -48,7 +48,7 @@ Paso 4: Tu jefe inmediato aprueba la solicitud y luego la revisa Contabilidad.
 El reembolso aprobado se paga por transferencia a la cuenta de nómina en un plazo de 10 días hábiles después de la aprobación de Contabilidad.
 
 8. CONTACTO
-Dudas sobre reembolsos: reembolsos@grupobios.example o extensión 2210.""",
+Dudas sobre reembolsos: reembolsos@nubeverde.example o extensión 2210.""",
 ]
 
 
@@ -59,13 +59,13 @@ def build_reimbursement_pdf(target: Path) -> None:
 def build_it_support_docx(target: Path) -> None:
     document = docx.Document()
     props = document.core_properties
-    props.author = "GrupoBios"
+    props.author = "Nubeverde S.A.S."
     props.title = "Guía de soporte de TI"
     props.created = props.modified = dt.datetime(2026, 1, 15, tzinfo=dt.UTC)
 
     document.add_heading("Guía de soporte de TI", level=0)
     document.add_paragraph(
-        "GrupoBios (contenido ficticio de ejemplo). Código TI-GUI-001. Versión 2, vigente desde el "
+        "Nubeverde S.A.S. (empresa ficticia). Código TI-GUI-001. Versión 2, vigente desde el "
         "15 de enero de 2026. Responsable: Coordinación de Tecnología."
     )
 
@@ -73,7 +73,7 @@ def build_it_support_docx(target: Path) -> None:
     document.add_paragraph(
         "La mesa de servicio de TI atiende de lunes a viernes de 7:00 a. m. a 7:00 p. m. y los "
         "sábados de 8:00 a. m. a 12:00 m. Los canales son el portal Mi Nube (menú "
-        '"Tecnología" > "Nuevo caso"), el correo soporte@grupobios.example y la extensión '
+        '"Tecnología" > "Nuevo caso"), el correo soporte@nubeverde.example y la extensión '
         "4357. Fuera de horario, solo los incidentes de prioridad P1 se atienden por la línea "
         "de guardia 601 555 0199."
     )
@@ -99,7 +99,7 @@ def build_it_support_docx(target: Path) -> None:
         "caracteres, con mayúsculas, minúsculas y números."
     )
     for step in (
-        "Paso 1: Abre https://clave.grupobios.example desde cualquier navegador.",
+        "Paso 1: Abre https://clave.nubeverde.example desde cualquier navegador.",
         "Paso 2: Escribe tu usuario corporativo y elige la opción Olvidé mi contraseña.",
         "Paso 3: Ingresa el código de 6 dígitos que llega a tu celular registrado.",
         "Paso 4: Define la nueva contraseña. No puede repetir ninguna de las últimas 5.",

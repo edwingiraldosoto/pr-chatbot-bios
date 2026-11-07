@@ -207,7 +207,7 @@ Escríbele al bot en un chat privado (en grupos no responde).
 | ¿Cuántos días de vacaciones tengo al año? | 15 días hábiles por año completo… Fuentes: politica_vacaciones.md, sección "2. Días de vacaciones". |
 | ¿y se pueden acumular? *(seguimiento)* | Sí, máximo 2 periodos… Fuentes: politica_vacaciones.md, sección "4. Acumulación de vacaciones". |
 | ¿Cuál es el tope diario de alimentación en un viaje? | $60.000 por día… Fuentes: reembolso_gastos.pdf, página 2. |
-| ¿Cómo restablezco mi contraseña? | Paso 1: Abre https://clave.grupobios.example… Fuentes: soporte_ti.docx, sección "3. Restablecer la contraseña". |
+| ¿Cómo restablezco mi contraseña? | Paso 1: Abre https://clave.nubeverde.example… Fuentes: soporte_ti.docx, sección "3. Restablecer la contraseña". |
 | ¿Cuál es la capital de Australia? | No encontré esa información en los documentos disponibles… |
 
 **Comandos**
@@ -370,5 +370,5 @@ están en [`docs/EVALUACION.md`](docs/EVALUACION.md).
 | [`prompts/`](prompts/) | Prompt de sistema y de reformulación |
 | [`config.yaml`](config.yaml), [`.env.example`](.env.example) | Todos los parámetros, comentados |
 
-Los documentos de `knowledge_base/` son de GrupoBios con contenido ficticio y se
+Los documentos de `knowledge_base/` son de una empresa ficticia (Nubeverde S.A.S.) y se
 redactaron con ayuda de IA.

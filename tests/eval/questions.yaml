@@ -86,9 +86,9 @@
 - id: ti_contrasena
   kind: in_scope
   question: ¿Cómo restablezco mi contraseña?
-  expected: "Pasos en clave.grupobios.example con el código de 6 dígitos al celular."
+  expected: "Pasos en clave.nubeverde.example con el código de 6 dígitos al celular."
   sources: [soporte_ti.docx]
-  facts: [["clave.grupobios"], ["codigo", "6 digitos"]]
+  facts: [["clave.nubeverde"], ["codigo", "6 digitos"]]
 
 - id: ti_p1
   kind: in_scope
