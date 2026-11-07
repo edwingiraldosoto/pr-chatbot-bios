@@ -276,6 +276,18 @@ docker compose exec bot python -m scripts.unanswered --salida -   # preguntas si
 docker compose down
 ```
 
+**Los secretos no viven en la imagen.** El `.dockerignore` deja fuera el `.env`, y Compose
+pasa sus valores al contenedor cuando lo crea. Por eso, después de cambiar el `.env`
+(por ejemplo, al rotar el token o la API key), hay que recrear el contenedor:
+
+```bash
+docker compose up -d --force-recreate
+```
+
+`docker compose restart` no sirve para esto: reutiliza el contenedor con los valores
+viejos. No hace falta reconstruir la imagen. Después de cambiar el código o los prompts,
+en cambio, sí: `docker compose up -d --build`.
+
 ## Operación
 
 - **Preguntas sin respuesta:** cada "no encontrado" se guarda con la fecha, el usuario, la
@@ -305,6 +317,7 @@ docker compose down
 | El bot dice "No tienes acceso" | Tu ID no está en `ALLOWED_USER_IDS` ni en `ADMIN_USER_IDS`; agrégalo y reinicia |
 | "El servicio de respuestas no está disponible" | El proveedor falló o la key no es válida: corre `python -m mesa_ayuda.llm.check` |
 | Un documento no aparece en `/fuentes` | Míralo en el resumen de `/reindex`: puede estar ilegible o en cuarentena |
+| En Docker, "Falta TELEGRAM_BOT_TOKEN" y el contenedor se reinicia sin parar | El contenedor se creó con un `.env` incompleto o anterior: corrige el `.env` y ejecuta `docker compose up -d --force-recreate` |
 
 ## Pruebas y evaluación
 

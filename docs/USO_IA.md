@@ -461,3 +461,29 @@ Repetí la evaluación con los documentos cambiados y falló un seguimiento (`se
 que antes pasaba. La búsqueda acertó y el modelo respondió `NO_ENCONTRADO`; al repetirlo 5
 veces pasó las 5. Lo dejé registrado como fallo en `docs/EVALUACION.md`, en lugar de
 repetir la ejecución completa hasta que saliera perfecta.
+
+### 2026-11-07 — Verificación final (S10: T-45)
+
+Resultados tal cual:
+
+- **Clon limpio siguiendo solo el README** (Windows 11, Python 3.11.9): con los tres
+  comandos, la instalación tardó 5,8 min y ocupa 580 MB. El bot quedó listo en 141 s en el
+  primer arranque, con la descarga del modelo incluida. En ese clon pasan las 629 pruebas,
+  ruff y mypy, y también la prueba con el modelo real (`RUN_MODEL_TESTS=1`).
+- **Escaneo de secretos del historial:** gitleaks 8.21.2 (imagen oficial, repositorio
+  montado en solo lectura) revisó 81 commits y no encontró filtraciones. Además busqué los
+  valores exactos del token, la API key y el código de invitación en `git log -p --all` y en
+  los archivos versionados; no aparecen.
+- **Revisión de seguridad** (`/security-review`, con un agente aparte sobre todo el código):
+  sin vulnerabilidades. Se revisaron el control de acceso, los comandos de administrador,
+  las invitaciones, la ruta del botón de descarga, el SQL parametrizado, el aislamiento del
+  historial, la deserialización, los secretos en los logs y el contenedor.
+- **Docker con el código final:** la imagen se reconstruyó con el último commit. Al rotar
+  el token y la key, el contenedor entró en un bucle de reinicios ("Falta
+  TELEGRAM_BOT_TOKEN"), porque se había creado con un `.env` a medio editar y `up --build` no
+  lo recreó. Se resolvió con `--force-recreate`, y el README ahora lo explica.
+- **Pendiente del autor antes de entregar:**
+  - la prueba con lector de pantalla;
+  - fijar el tope de gasto en la consola de Anthropic;
+  - revisar con sus palabras `CRITERIO_TECNICO.md` y esta página;
+  - hacer el push y dar acceso a luis.sanchez@grupobios.co si el repositorio es privado.

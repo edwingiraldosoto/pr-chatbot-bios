@@ -154,7 +154,7 @@ Cambio pedido por el autor el 2026-11-06 para la evaluación (CA-07.5, RNF-08, p
 
 ## Fase S10: Verificación final
 
-- [ ] T-45 Clon limpio siguiendo solo el README; escaneo de secretos del historial; revisión de seguridad y de código; estado final de esta lista — todo el repositorio — RNF-02, RNF-03, SC-004, SC-007
+- [x] T-45 Clon limpio siguiendo solo el README; escaneo de secretos del historial; revisión de seguridad y de código; estado final de esta lista — todo el repositorio — RNF-02, RNF-03, SC-004, SC-007
 
 ---
 
@@ -244,7 +244,7 @@ Estado al momento de la entrega (se actualiza al cerrar cada fase).
 | T-42 | Enunciado §6.3 | S9 | Terminada | `6c94b4a` |
 | T-43 | Enunciado §6.6 | S9 | Terminada | `cf81c5b` |
 | T-44 | Enunciado §6.4 | S9 | Terminada | este commit |
-| T-45 | RNF-02, RNF-03 | S10 | Pendiente | — |
+| T-45 | RNF-02, RNF-03 | S10 | Terminada (resultados en `docs/USO_IA.md`, 2026-11-07) | este commit |
 
 ### Cobertura de requisitos
 
