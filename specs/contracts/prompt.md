@@ -44,6 +44,9 @@ Cada colaborador tiene derecho a 15 días hábiles…
 
 ## Post-proceso de la salida
 
+Desde S8: al quitar un marcador, dos puntos seguidos ("p. m. [1]." → "p. m..") se
+reducen a uno; los puntos suspensivos se respetan.
+
 | Salida del modelo | Resultado |
 |---|---|
 | `NO_ENCONTRADO` (ignorando espacios y puntuación), solo o al inicio de la respuesta | "No encontré esa información en los documentos disponibles…" sin fuentes; registro `llm_not_found` |
@@ -59,8 +62,22 @@ Fuentes: politica_vacaciones.md, sección "2. Días de vacaciones"; reembolso_ga
 
 ## Llamada de reformulación (solo con historial)
 
-**system** = contenido de `REWRITE_PROMPT_PATH`: "Reescribe la última pregunta del usuario
-como una pregunta autónoma en español, usando la conversación solo para resolver
-referencias. No la respondas. Devuelve solo la pregunta."
+**system** = contenido de `REWRITE_PROMPT_PATH`. Desde la calibración de S8 (plan 1.9) la
+regla es conservadora: la conversación se usa **solo** cuando la pregunta tiene una
+referencia que no se entiende sola ("eso", "¿y se pueden acumular?", "¿y si llevo 6
+años?"); en cualquier otro caso (pregunta corta, ambigua o de otro tema) se devuelve
+**igual**. Nunca se agregan cifras, unidades, nombres ni interpretaciones, y nunca se
+responde ni se pide aclaración.
 
-**messages** = historial + `<pregunta>…</pregunta>`; `temperature=0`, `max_tokens=100`.
+**messages** = historial + `<pregunta>…</pregunta>`; temperatura 0 donde el proveedor la
+acepta; `max_tokens = LLM_REWRITE_MAX_TOKENS`.
+
+**Respaldo en código**: si la salida no parece una sola pregunta (texto después del primer
+"?", o más de 3 veces el largo de la original), se usa la pregunta original. Antes solo se
+revisaba el largo.
+
+Medido en S8 con 8 preguntas reales de la prueba en Telegram, 5 veces cada una: con el
+prompt anterior la reformulación agregó contenido inventado en casos como "Cómo formatear
+un ocho" → "¿Cómo se formatea un disco de ocho (8) terabytes?" o contestó en lugar de
+reescribir ("Formatear ¿qué? Ese mensaje no permite…"); con el nuevo, 0 de 40, y los
+seguimientos reales se siguen completando.
