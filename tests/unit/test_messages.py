@@ -14,6 +14,7 @@ from mesa_ayuda.bot.messages import (
     sources_list,
     split_message,
 )
+from mesa_ayuda.bot.small_talk import SmallTalk
 from mesa_ayuda.indexing.indexer import ReindexSummary, SourceInfo
 
 
@@ -48,7 +49,7 @@ def test_user_texts_are_plain_and_accessible() -> None:
     templates = [
         value for name, value in vars(messages).items() if name.isupper() and isinstance(value, str)
     ]
-    texts = [text.format(user_id=1, reason="motivo") for text in templates]
+    texts = [text.format(user_id=1, reason="motivo", hello="Hola") for text in templates]
     texts += [help_text(is_admin=True)]
     for text in texts:
         assert not re.search(r"[*_`<>]|\[.+\]\(", text), text
@@ -177,3 +178,20 @@ def test_emojis_count_double_like_in_telegram() -> None:
 def test_limit_must_be_positive() -> None:
     with pytest.raises(ValueError, match="al menos 1"):
         split_message("x", limit=0)
+
+
+@pytest.mark.parametrize(
+    ("first_name", "start"),
+    [("Edwin", "Hola, Edwin."), ("EDWIN", "Hola, Edwin."), (None, "Hola."), ("  ", "Hola.")],
+)
+def test_greeting_is_cordial_and_points_to_help(first_name: str | None, start: str) -> None:
+    # CA-06.5
+    text = messages.small_talk(SmallTalk.GREETING, first_name)
+
+    assert text.startswith(start)
+    assert "/help" in text and "¿Cuántos días de vacaciones tengo?" in text
+
+
+def test_thanks_and_farewell_replies() -> None:
+    assert messages.small_talk(SmallTalk.THANKS, "Edwin") == messages.THANKS
+    assert messages.small_talk(SmallTalk.FAREWELL) == messages.FAREWELL

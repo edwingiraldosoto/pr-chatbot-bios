@@ -37,6 +37,7 @@ from telegram.ext import (
 from mesa_ayuda.answering import Answer
 from mesa_ayuda.bot import messages
 from mesa_ayuda.bot.messages import split_message
+from mesa_ayuda.bot.small_talk import classify
 from mesa_ayuda.guards import (
     AccessControl,
     DuplicateFilter,
@@ -273,6 +274,12 @@ class BotHandlers:
         text = clean_question(message.text)
         if text is None:
             await self.not_text(update, context)
+            return
+        kind = classify(text)
+        if kind is not None:  # saludo, gracias o despedida: sin modelo (CA-06.5)
+            first_name = update.effective_user.first_name if update.effective_user else None
+            await reply(message, messages.small_talk(kind, first_name))
+            log.info("message_handled", outcome="small_talk", kind=kind.value)
             return
         started = time.perf_counter()
         async with self._lock(user_id):

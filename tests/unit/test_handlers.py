@@ -19,6 +19,7 @@ from structlog.testing import capture_logs
 from mesa_ayuda.answering import Answer, Outcome, Source
 from mesa_ayuda.bot import messages
 from mesa_ayuda.bot.handlers import Answerer, BotHandlers
+from mesa_ayuda.bot.small_talk import SmallTalk
 from mesa_ayuda.embeddings import EmbeddingModelError
 from mesa_ayuda.guards import AccessControl, DuplicateFilter, RateLimiter
 from mesa_ayuda.indexing.indexer import ReindexInProgressError, ReindexSummary, SourceInfo
@@ -555,20 +556,23 @@ async def test_summary_includes_warnings_of_new_or_updated_documents(storage: St
 async def test_burst_of_copies_gets_one_answer_and_one_llm_call(
     storage: Storage, index: FakeIndex
 ) -> None:
-    # Lo visto en la prueba real: un "hola" llegó 10 veces y el bot respondió 10.
+    # Lo visto en la prueba real: un mensaje llegó 10 veces y el bot respondió 10.
     script = ScriptedAnswers()
     handlers = make_handlers(storage, index, answers=script, limit=10)
     handlers.duplicates = DuplicateFilter(5)
     async with TelegramHarness(handlers) as bot:
-        replies = [await bot.send(USER, "hola") for _ in range(10)]
+        replies = [await bot.send(USER, "¿Cómo pido vacaciones?") for _ in range(10)]
         with capture_logs() as logs:
-            await bot.send(USER, "hola")
+            await bot.send(USER, "¿Cómo pido vacaciones?")
         after = await bot.send(USER, "¿Cuántos días de vacaciones?")
         starts = [await bot.send(USER, "/start") for _ in range(3)]
 
     assert replies[0] == ['Respuesta.\n\nFuentes: politica_vacaciones.md, sección "Días".']
     assert replies[1:] == [[]] * 9
-    assert [question for question, _ in script.calls] == ["hola", "¿Cuántos días de vacaciones?"]
+    assert [question for question, _ in script.calls] == [
+        "¿Cómo pido vacaciones?",
+        "¿Cuántos días de vacaciones?",
+    ]
     assert any(e.get("outcome") == "duplicate" for e in logs)
     assert after[0].startswith("Respuesta.")  # las copias no gastaron el límite por minuto
     assert starts == [[messages.START], [], []]
@@ -585,3 +589,45 @@ async def test_duplicate_filter_runs_after_the_access_check(
 
     assert first == [messages.access_denied(STRANGER)]
     assert second == [messages.access_denied(STRANGER)]  # sigue sabiendo que no tiene acceso
+
+
+# --- Saludos (T-50; CA-06.5) ----------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("text", "kind"),
+    [
+        ("hola", SmallTalk.GREETING),
+        ("¡Holaaa!", SmallTalk.GREETING),
+        ("Buenas tardes", SmallTalk.GREETING),
+        ("muchas gracias", SmallTalk.THANKS),
+        ("chao", SmallTalk.FAREWELL),
+    ],
+)
+async def test_small_talk_is_answered_cordially_without_the_model(
+    storage: Storage, index: FakeIndex, text: str, kind: SmallTalk
+) -> None:
+    script = ScriptedAnswers()
+    async with TelegramHarness(make_handlers(storage, index, answers=script)) as bot:
+        with capture_logs() as logs:
+            replies = await bot.send(USER, text)
+
+    assert replies == [messages.small_talk(kind, "Usuario")]
+    assert script.calls == []  # sin búsqueda ni modelo
+    assert storage.history(USER) == [] and storage.unanswered() == []
+    assert any(e.get("outcome") == "small_talk" and e["kind"] == kind.value for e in logs)
+
+
+async def test_greeting_uses_the_first_name_and_mentions_help(bot: TelegramHarness) -> None:
+    (reply,) = await bot.send(USER, "hola")
+
+    assert reply.startswith("Hola, Usuario.") and "/help" in reply
+
+
+async def test_greeting_with_a_question_is_a_question(storage: Storage, index: FakeIndex) -> None:
+    script = ScriptedAnswers([answered("Tienes 15 días hábiles.")])
+    async with TelegramHarness(make_handlers(storage, index, answers=script)) as bot:
+        replies = await bot.send(USER, "Hola, ¿cuántos días de vacaciones tengo?")
+
+    assert replies[0].startswith("Tienes 15 días hábiles.")
+    assert script.calls[0][0] == "Hola, ¿cuántos días de vacaciones tengo?"

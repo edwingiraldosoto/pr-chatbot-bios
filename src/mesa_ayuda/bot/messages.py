@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
+from mesa_ayuda.bot.small_talk import SmallTalk
 from mesa_ayuda.indexing.indexer import ReindexSummary, SourceInfo
 
 TELEGRAM_LIMIT = 4096  # caracteres por mensaje, medidos en unidades UTF-16
@@ -69,6 +70,14 @@ LLM_UNAVAILABLE = (
 UNEXPECTED_ERROR = "Ocurrió un error inesperado al procesar tu mensaje. Intenta de nuevo."
 UNKNOWN_COMMAND = "No conozco ese comando. Usa /help para ver los disponibles."
 
+GREETING = (
+    "{hello}. Con gusto te ayudo con las políticas, procedimientos y guías de la "
+    "empresa. Escríbeme tu pregunta, por ejemplo: ¿Cuántos días de vacaciones tengo? "
+    "Usa /help para ver cómo preguntar y los comandos."
+)
+THANKS = "Con gusto. Si tienes otra pregunta, aquí estoy."
+FAREWELL = "Hasta pronto. Cuando necesites algo, escríbeme."
+
 ADMIN_ONLY = "Este comando es solo para administradores."
 REINDEX_STARTED = "Reindexación iniciada…"
 REINDEX_FULL_STARTED = "Reconstrucción completa del índice iniciada…"
@@ -80,6 +89,18 @@ REINDEX_FAILED = "La reindexación falló: {reason}. Revisa el log del bot."
 def help_text(*, is_admin: bool) -> str:
     """Ayuda según el rol: los comandos de administrador solo los ven ellos (CA-06.2)."""
     return _HELP_BODY + (_HELP_ADMIN if is_admin else "")
+
+
+def small_talk(kind: SmallTalk, first_name: str | None = None) -> str:
+    """Respuesta cordial a un saludo, agradecimiento o despedida (CA-06.5)."""
+    if kind is SmallTalk.THANKS:
+        return THANKS
+    if kind is SmallTalk.FAREWELL:
+        return FAREWELL
+    name = (first_name or "").strip()
+    if name.isupper():  # "EDWIN" se lee como un grito
+        name = name.title()
+    return GREETING.format(hello=f"Hola, {name}" if name else "Hola")
 
 
 def access_denied(user_id: int) -> str:
