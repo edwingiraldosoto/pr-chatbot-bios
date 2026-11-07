@@ -19,8 +19,9 @@ from structlog.testing import capture_logs
 from mesa_ayuda.answering import Answer, Outcome, Source
 from mesa_ayuda.bot import messages
 from mesa_ayuda.bot.handlers import Answerer, BotHandlers
+from mesa_ayuda.embeddings import EmbeddingModelError
 from mesa_ayuda.guards import AccessControl, RateLimiter
-from mesa_ayuda.indexing.indexer import ReindexSummary, SourceInfo
+from mesa_ayuda.indexing.indexer import ReindexInProgressError, ReindexSummary, SourceInfo
 from mesa_ayuda.llm.base import (
     LLMAuthError,
     LLMBadRequestError,
@@ -43,13 +44,26 @@ class FakeIndex:
     def __init__(self, sources: list[SourceInfo] | None = None) -> None:
         self._sources = sources or []
         self.is_reindexing = False
-        self.summary = ReindexSummary()
+        self.summary: ReindexSummary | BaseException = ReindexSummary()
+        self.release: asyncio.Event | None = None  # si existe, la reindexación lo espera
+        self.calls: list[bool] = []
 
     def sources(self) -> list[SourceInfo]:
         return self._sources
 
     async def reindex_async(self, *, full: bool = False) -> ReindexSummary:
-        return self.summary
+        if self.is_reindexing:
+            raise ReindexInProgressError
+        self.is_reindexing = True
+        self.calls.append(full)
+        try:
+            if self.release is not None:
+                await self.release.wait()
+            if isinstance(self.summary, BaseException):
+                raise self.summary
+            return self.summary
+        finally:
+            self.is_reindexing = False
 
 
 @pytest.fixture
@@ -431,3 +445,105 @@ async def test_messages_of_one_user_wait_their_turn_others_do_not(
 
     assert order.index("fin a") < order.index("inicio b")  # el mismo usuario, en orden
     assert order.index("inicio c") < order.index("fin a")  # otro usuario no espera
+
+
+# --- /reindex (T-31; RF-08) -----------------------------------------------------------------
+
+
+async def test_reindex_answers_started_and_then_the_summary(
+    bot: TelegramHarness, index: FakeIndex
+) -> None:
+    # CA-08.1
+    index.summary = ReindexSummary(added=["nuevo.md"], unchanged=3, duration_s=1.5)
+
+    replies = await bot.send(ADMIN, "/reindex")
+
+    assert replies == [
+        messages.REINDEX_STARTED,
+        "Reindexación terminada en 1,5 s: 1 nuevo, 0 actualizados, 0 eliminados, 3 sin cambios.",
+    ]
+    assert index.calls == [False]
+
+
+async def test_reindex_full_rebuilds(bot: TelegramHarness, index: FakeIndex) -> None:
+    # CA-08.2
+    index.summary = ReindexSummary(added=["a.md"], full_rebuild=True, rebuild_reason="solicitada")
+
+    replies = await bot.send(ADMIN, "/reindex FULL")
+
+    assert replies[0] == messages.REINDEX_FULL_STARTED
+    assert replies[1].startswith("Reconstrucción completa terminada")
+    assert index.calls == [True]
+
+
+async def test_reindex_is_only_for_admins(bot: TelegramHarness, index: FakeIndex) -> None:
+    # CA-08.3
+    assert await bot.send(USER, "/reindex") == [messages.ADMIN_ONLY]
+    assert index.calls == []
+
+
+async def test_reindex_with_an_unknown_argument_shows_the_usage(
+    bot: TelegramHarness, index: FakeIndex
+) -> None:
+    assert await bot.send(ADMIN, "/reindex todo") == [messages.REINDEX_USAGE]
+    assert index.calls == []
+
+
+async def test_bot_keeps_answering_during_a_reindex_and_rejects_a_second_one(
+    storage: Storage, index: FakeIndex
+) -> None:
+    # CA-08.4, CA-08.5
+    index.release = asyncio.Event()
+    script = ScriptedAnswers([answered("15 días.")])
+    async with TelegramHarness(make_handlers(storage, index, answers=script)) as bot:
+        running = asyncio.create_task(bot.send(ADMIN, "/reindex"))
+        while not index.is_reindexing:
+            await asyncio.sleep(0)
+
+        question = await bot.send(USER, "¿Cuántos días de vacaciones?")
+        second = await bot.send(ADMIN, "/reindex full")
+        sources = await bot.send(USER, "/fuentes")
+        index.release.set()
+        await running
+        admin_chat = bot.sent(ADMIN)
+
+    assert question[0].startswith("15 días.")
+    assert second == [messages.REINDEX_IN_PROGRESS]
+    assert sources[0].startswith("Documentos que puedo consultar")
+    started, busy, summary = admin_chat
+    assert (started, busy) == (messages.REINDEX_STARTED, messages.REINDEX_IN_PROGRESS)
+    assert summary.startswith("Reindexación terminada")
+    assert index.calls == [False]
+
+
+async def test_reindex_failure_is_reported_and_the_bot_survives(
+    bot: TelegramHarness, index: FakeIndex
+) -> None:
+    index.summary = EmbeddingModelError("no se pudo descargar el modelo de embeddings")
+
+    replies = await bot.send(ADMIN, "/reindex")
+
+    assert replies[1] == (
+        "La reindexación falló: no se pudo descargar el modelo de embeddings. "
+        "Revisa el log del bot."
+    )
+    assert await bot.send(ADMIN, "/start") == [messages.START]
+
+
+async def test_summary_includes_warnings_of_new_or_updated_documents(storage: Storage) -> None:
+    # CA-R5.5 y advertencias de texto sospechoso (RF-13).
+    index = FakeIndex(
+        [
+            SourceInfo("nuevo.pdf", "indexed", 2, "", ("página 3: texto sospechoso",)),
+            SourceInfo("viejo.pdf", "indexed", 2, "", ("página 1: ya avisado",)),
+        ]
+    )
+    index.summary = ReindexSummary(
+        added=["nuevo.pdf"], unreadable=[("escaneado.pdf", "no tiene texto extraíble")]
+    )
+    async with TelegramHarness(make_handlers(storage, index)) as bot:
+        replies = await bot.send(ADMIN, "/reindex")
+
+    assert "Ilegibles: escaneado.pdf (no tiene texto extraíble)." in replies[1]
+    assert "Advertencias: nuevo.pdf: página 3: texto sospechoso." in replies[1]
+    assert "viejo.pdf" not in replies[1]

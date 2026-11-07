@@ -44,7 +44,7 @@ from mesa_ayuda.guards import (
     clean_question,
     is_private_chat,
 )
-from mesa_ayuda.indexing.indexer import ReindexSummary, SourceInfo
+from mesa_ayuda.indexing.indexer import ReindexInProgressError, ReindexSummary, SourceInfo
 from mesa_ayuda.llm.base import (
     ChatMessage,
     LLMAuthError,
@@ -117,7 +117,7 @@ class BotHandlers:
         access: Quién puede usar el bot y quién administra.
         limiter: Límite de mensajes por minuto.
         storage: Historial y preguntas sin respuesta.
-        indexer: Índice de documentos (``/fuentes``).
+        indexer: Índice de documentos (``/fuentes`` y ``/reindex``).
         answers: Servicio de respuesta.
         log_questions: ``LOG_QUESTIONS``: incluir el texto de la pregunta en el evento
             ``message_handled`` (CA-R6.2). Con ``LOG_LEVEL=DEBUG`` sale siempre, en un
@@ -153,6 +153,7 @@ class BotHandlers:
         application.add_handler(CommandHandler("help", self.help, filters=new_message))
         application.add_handler(CommandHandler("reset", self.reset, filters=new_message))
         application.add_handler(CommandHandler("fuentes", self.sources, filters=new_message))
+        application.add_handler(CommandHandler("reindex", self.reindex, filters=new_message))
         application.add_handler(MessageHandler(new_message & filters.COMMAND, self.unknown))
         application.add_handler(MessageHandler(new_message & filters.TEXT, self.question))
         application.add_handler(MessageHandler(new_message, self.not_text))
@@ -209,6 +210,48 @@ class BotHandlers:
         """``/fuentes``: documentos indexados con sus fragmentos (CA-06.4)."""
         await reply(_message(update), messages.sources_list(self.indexer.sources()))
         log.info("message_handled", outcome="command", command="fuentes")
+
+    async def reindex(self, update: Update, context: Context) -> None:
+        """``/reindex`` y ``/reindex full``, solo para administradores (RF-08).
+
+        Responde de inmediato que empezó y, al terminar, el resumen. Como las
+        actualizaciones se procesan en paralelo, el bot sigue atendiendo preguntas mientras
+        tanto (CA-08.4).
+        """
+        message, user_id = _message(update), _user_id(update)
+        if not self.access.is_admin(user_id):
+            await reply(message, messages.ADMIN_ONLY)  # CA-08.3
+            log.info("message_handled", outcome="command", command="reindex", denied=True)
+            return
+        args = [arg.lower() for arg in context.args or []]
+        if args not in ([], ["full"]):
+            await reply(message, messages.REINDEX_USAGE)
+            return
+        full = bool(args)
+        if self.indexer.is_reindexing:
+            await reply(message, messages.REINDEX_IN_PROGRESS)  # CA-08.5
+            log.info("message_handled", outcome="command", command="reindex", busy=True)
+            return
+
+        await reply(message, messages.REINDEX_FULL_STARTED if full else messages.REINDEX_STARTED)
+        try:
+            summary = await self.indexer.reindex_async(full=full)
+        except ReindexInProgressError:  # otra empezó entre la revisión y este punto
+            await reply(message, messages.REINDEX_IN_PROGRESS)
+            return
+        except Exception as error:  # el bot sigue vivo; el detalle queda en el log
+            log.exception("reindex_failed", full=full)
+            await reply(message, messages.reindex_failed(str(error) or type(error).__name__))
+            return
+        changed = {*summary.added, *summary.updated}
+        warnings = [
+            (info.source, warning)
+            for info in self.indexer.sources()
+            if info.source in changed and info.status == "indexed"
+            for warning in info.warnings
+        ]
+        await reply(message, messages.reindex_summary(summary, warnings))
+        log.info("message_handled", outcome="command", command="reindex", full=full)
 
     async def unknown(self, update: Update, context: Context) -> None:
         """Comando que no existe."""
