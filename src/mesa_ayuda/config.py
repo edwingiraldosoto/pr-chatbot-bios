@@ -51,6 +51,7 @@ YAML_PATHS: dict[str, tuple[str, str]] = {
     "llm_max_retries": ("llm", "max_retries"),
     "llm_anthropic_model": ("anthropic", "model"),
     "llm_anthropic_effort": ("anthropic", "effort"),
+    "llm_anthropic_thinking": ("anthropic", "thinking"),
     "llm_openai_model": ("openai", "model"),
     "llm_openai_base_url": ("openai", "base_url"),
     "llm_openai_temperature": ("openai", "temperature"),
@@ -112,6 +113,7 @@ OPTIONAL_FIELDS = (
     "llm_base_url",
     "llm_temperature",
     "llm_anthropic_effort",
+    "llm_anthropic_thinking",
     "llm_openai_base_url",
     "llm_openai_temperature",
     "llm_openai_reasoning_effort",
@@ -218,6 +220,7 @@ class Settings(BaseSettings):
     # --- Perfiles por proveedor (CA-R1.6); None = el parámetro no se envía ---
     llm_anthropic_model: str = "claude-haiku-5-5"
     llm_anthropic_effort: Literal["low", "medium", "high", "xhigh", "max"] | None = "low"
+    llm_anthropic_thinking: Literal["disabled", "adaptive"] | None = "disabled"
     llm_openai_model: str = "gpt-5-mini"
     llm_openai_base_url: str | None = None
     llm_openai_temperature: float | None = Field(None, ge=0.0, le=2.0)

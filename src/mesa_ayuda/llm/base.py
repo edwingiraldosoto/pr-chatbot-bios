@@ -38,12 +38,17 @@ class ChatMessage:
 
 @dataclass(frozen=True)
 class LLMResult:
-    """Texto generado y consumo de tokens de una llamada."""
+    """Texto generado y consumo de tokens de una llamada.
+
+    ``truncated`` indica que el modelo se detuvo por ``max_tokens``: el texto puede terminar
+    a mitad de una palabra.
+    """
 
     text: str
     input_tokens: int
     output_tokens: int
     model: str
+    truncated: bool = False
 
 
 class LLMError(Exception):
@@ -198,7 +203,11 @@ def create_provider(settings: Settings) -> LLMProvider:
         from mesa_ayuda.llm.anthropic import AnthropicProvider
 
         inner = AnthropicProvider(
-            api_key=api_key, model=llm.model, timeout_seconds=timeout, effort=llm.effort
+            api_key=api_key,
+            model=llm.model,
+            timeout_seconds=timeout,
+            effort=llm.effort,
+            thinking=settings.llm_anthropic_thinking,
         )
     elif llm.provider == "openai":
         from mesa_ayuda.llm.openai import OpenAIProvider

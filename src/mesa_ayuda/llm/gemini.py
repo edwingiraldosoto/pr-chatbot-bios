@@ -103,11 +103,14 @@ class GeminiProvider:
             raise TransientLLMError(f"Gemini: error de red ({error})") from error
 
         usage = response.usage_metadata
+        candidate = response.candidates[0] if response.candidates else None
+        finish = getattr(candidate.finish_reason, "name", None) if candidate else None
         return LLMResult(
             text=(response.text or "").strip(),
             input_tokens=(usage.prompt_token_count or 0) if usage else 0,
             output_tokens=(usage.candidates_token_count or 0) if usage else 0,
             model=self.model,
+            truncated=finish == "MAX_TOKENS",
         )
 
 

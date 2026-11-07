@@ -45,6 +45,10 @@ anthropic:
   # gaste tokens razonando en respuestas cortas. Vacío para modelos que no lo aceptan
   # (Haiku 4.5 y anteriores). Su API ya no acepta temperatura.
   effort: low
+  # LLM_ANTHROPIC_THINKING: disabled | adaptive. "disabled" impide que el modelo gaste el
+  # límite de tokens razonando (con "low" igual lo hacía ante preguntas de varios temas y la
+  # respuesta llegaba cortada). Vacío = no se envía.
+  thinking: disabled
 
 openai:
   # LLM_OPENAI_MODEL: ID del modelo (o el nombre que use la API compatible).

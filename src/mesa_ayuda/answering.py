@@ -8,6 +8,8 @@
 4. Se leen los marcadores ``[n]`` de la respuesta: se quitan del texto y las fuentes se
    construyen con los metadatos del índice de esos fragmentos, nunca con nombres escritos
    por el modelo (CA-03.1–CA-03.3).
+5. Si el modelo se detuvo por ``LLM_MAX_TOKENS``, la respuesta se recorta a la última
+   oración completa y se avisa al usuario; nunca termina a mitad de una palabra.
 
 Los errores del proveedor (:class:`~mesa_ayuda.llm.base.LLMError`) se propagan: el bot los
 convierte en mensajes para el usuario (RNF-05).
@@ -38,6 +40,12 @@ _SPACES = re.compile(r"[ \t]{2,}")
 # "p. m. [1]." queda como "p. m.." al quitar el marcador; los puntos suspensivos se respetan.
 _DOUBLE_PERIOD = re.compile(r"(?<!\.)\.\.(?!\.)")
 _NOT_LETTERS = re.compile(r"[^A-Z_]")
+# Fin de una oración completa: punto, cierre de pregunta o exclamación (con su marcador [n]).
+_SENTENCE_END = re.compile(r"[.?!](?:\s*\[[\d,;\s]+\])*(?=\s|$)")
+
+TRUNCATED_NOTE = (
+    "La respuesta quedó incompleta. Pregúntame por un tema a la vez para darte el detalle."
+)
 
 
 class Outcome(StrEnum):
@@ -151,6 +159,12 @@ def extract_citations(text: str, fragment_count: int) -> Citations:
     return Citations(text=clean.strip(), used=used, invalid=invalid)
 
 
+def complete_sentences(text: str) -> str:
+    """Texto hasta la última oración completa (``""`` si no hay ninguna)."""
+    ends = [match.end() for match in _SENTENCE_END.finditer(text)]
+    return text[: ends[-1]].rstrip() if ends else ""
+
+
 def unique_sources(hits: Sequence[SearchHit]) -> list[Source]:
     """Fuentes de los fragmentos, sin repetir, conservando el orden."""
     return list(dict.fromkeys(Source.from_hit(hit) for hit in hits))
@@ -232,8 +246,17 @@ class AnswerService:
             usage.llm_calls + 1,
         )
 
-        citations = extract_citations(result.text, len(hits))
-        if is_not_found(result.text) or not citations.text:
+        text = result.text
+        if result.truncated:
+            text = complete_sentences(text)
+            log.warning(
+                "answer_truncated",
+                output_tokens=result.output_tokens,
+                max_tokens=self._max_tokens,
+                kept_chars=len(text),
+            )
+        citations = extract_citations(text, len(hits))
+        if is_not_found(text) or not citations.text:
             log.info("llm_not_found", empty=not citations.text)
             return finish(
                 Answer("", [], Outcome.LLM_NOT_FOUND, usage, retrieval.best_score, rewrite.question)
@@ -246,9 +269,12 @@ class AnswerService:
         else:
             log.warning("citations_fallback", fragments=len(hits))
             cited_hits = list(hits)
+        answer_text = citations.text
+        if result.truncated:
+            answer_text = f"{answer_text}\n\n{TRUNCATED_NOTE}"
         return finish(
             Answer(
-                text=citations.text,
+                text=answer_text,
                 sources=unique_sources(cited_hits),
                 outcome=Outcome.ANSWERED,
                 usage=usage,

@@ -126,4 +126,5 @@ class OpenAIProvider:
             input_tokens=usage.prompt_tokens if usage else 0,
             output_tokens=usage.completion_tokens if usage else 0,
             model=response.model or self.model,
+            truncated=choice is not None and choice.finish_reason == "length",
         )

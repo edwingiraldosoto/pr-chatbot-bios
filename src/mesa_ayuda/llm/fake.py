@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 
 from mesa_ayuda.llm.base import ChatMessage, LLMResult
 
-Reply = str | BaseException | Callable[[str, Sequence[ChatMessage]], str]
+Reply = str | LLMResult | BaseException | Callable[[str, Sequence[ChatMessage]], str]
 
 
 @dataclass(frozen=True)
@@ -25,7 +25,8 @@ class FakeCall:
 class FakeProvider:
     """Devuelve, en orden, las respuestas de ``replies``.
 
-    Cada respuesta puede ser un texto, una excepción (se lanza) o una función
+    Cada respuesta puede ser un texto, un :class:`LLMResult` (se devuelve tal cual), una
+    excepción (se lanza) o una función
     ``(system, messages) -> texto``. Cuando se acaban, se repite ``default``.
 
     Attributes:
@@ -55,6 +56,8 @@ class FakeProvider:
         reply = self.replies.pop(0) if self.replies else self.default
         if isinstance(reply, BaseException):
             raise reply
+        if isinstance(reply, LLMResult):
+            return reply
         text = reply(system, messages) if callable(reply) else reply
         input_tokens = (len(system) + sum(len(m.content) for m in messages)) // 4
         return LLMResult(

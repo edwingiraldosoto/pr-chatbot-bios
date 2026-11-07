@@ -96,6 +96,12 @@
     por `output_config.effort = "low"`.
   - Haiku 5.5 razona por defecto y esos tokens cuentan dentro de `LLM_MAX_TOKENS`. Con
     `effort = "low"` respondió sin bloques de razonamiento, lo mismo que Sonnet 5.5.
+  - **Corrección (2026-11-07)**: `effort = "low"` no basta. Ante una pregunta con varios
+    temas ("Vacaciones, extras, equipo") Haiku 5.5 razonó hasta agotar los 600 tokens en 2
+    de 3 intentos (`stop_reason: max_tokens`) y la respuesta llegó cortada a mitad de
+    palabra. Con `thinking: {"type": "disabled"}` respondió completa en 3 de 3 (270-380
+    tokens). Se agrega `anthropic.thinking` (`disabled` por defecto) y, como segunda
+    defensa, una respuesta cortada se recorta a la última oración completa con un aviso.
   - Haiku 4.5 y los modelos anteriores rechazan `effort`. Primero se resolvió con una lista
     de prefijos en `llm/anthropic.py`; desde T-47 (R-08) es configuración
     (`anthropic.effort` vacío = no se envía) y la lista se eliminó.

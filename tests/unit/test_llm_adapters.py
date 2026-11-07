@@ -79,14 +79,21 @@ ANTHROPIC_OK = {
 }
 
 
-def anthropic_provider(handler: Handler, effort: str | None = "low") -> AnthropicProvider:
+def anthropic_provider(
+    handler: Handler, effort: str | None = "low", thinking: str | None = "disabled"
+) -> AnthropicProvider:
     client = anthropic.AsyncAnthropic(
         api_key="k",
         max_retries=0,
         http_client=anthropic.DefaultAsyncHttpxClient(transport=httpx2.MockTransport(handler)),
     )
     return AnthropicProvider(
-        api_key="k", model="claude-haiku-5-5", timeout_seconds=5, effort=effort, client=client
+        api_key="k",
+        model="claude-haiku-5-5",
+        timeout_seconds=5,
+        effort=effort,
+        thinking=thinking,
+        client=client,
     )
 
 
@@ -123,6 +130,33 @@ async def test_anthropic_empty_effort_is_not_sent() -> None:
     await call(anthropic_provider(recorder, effort=None))
 
     assert "output_config" not in recorder.bodies[0]
+
+
+async def test_anthropic_thinking_is_disabled_by_the_profile() -> None:
+    # 2026-11-07: con effort "low", Haiku 5.5 igual razonó ante "Vacaciones, extras, equipo"
+    # y gastó los 600 tokens; la respuesta llegó cortada a mitad de palabra.
+    recorder = Recorder(status(200, ANTHROPIC_OK))
+
+    result = await call(anthropic_provider(recorder))
+
+    assert recorder.bodies[0]["thinking"] == {"type": "disabled"}
+    assert not result.truncated
+
+
+async def test_anthropic_empty_thinking_is_not_sent() -> None:
+    recorder = Recorder(status(200, ANTHROPIC_OK))
+
+    await call(anthropic_provider(recorder, thinking=None))
+
+    assert "thinking" not in recorder.bodies[0]
+
+
+async def test_anthropic_max_tokens_stop_marks_the_result_truncated() -> None:
+    recorder = Recorder(status(200, {**ANTHROPIC_OK, "stop_reason": "max_tokens"}))
+
+    result = await call(anthropic_provider(recorder))
+
+    assert result.truncated
 
 
 @pytest.mark.parametrize(
@@ -197,6 +231,14 @@ async def test_openai_official_api_uses_max_completion_tokens() -> None:
     # Perfil sin temperatura (GPT-5): no se envía aunque la llamada pida 0.
     assert "temperature" not in body
     assert (result.text, result.input_tokens, result.output_tokens) == ("Sí [2].", 80, 4)
+
+
+async def test_openai_length_finish_marks_the_result_truncated() -> None:
+    body = {**OPENAI_OK, "choices": [{**OPENAI_OK["choices"][0], "finish_reason": "length"}]}
+
+    result = await call(openai_provider(Recorder(status(200, body))))
+
+    assert result.truncated
 
 
 async def test_openai_compatible_api_uses_max_tokens() -> None:
@@ -295,6 +337,17 @@ async def test_gemini_request_and_response() -> None:
     assert body["systemInstruction"]["parts"][0]["text"] == "SISTEMA"
     assert body["generationConfig"] == {"temperature": 0.1, "maxOutputTokens": 300}
     assert (result.text, result.input_tokens, result.output_tokens) == ("Son 15 días [1].", 70, 6)
+
+
+async def test_gemini_max_tokens_finish_marks_the_result_truncated() -> None:
+    body = {
+        **GEMINI_OK,
+        "candidates": [{**GEMINI_OK["candidates"][0], "finishReason": "MAX_TOKENS"}],
+    }
+
+    result = await call(gemini_provider(Recorder(status(200, body))))
+
+    assert result.truncated
 
 
 async def test_gemini_call_temperature_overrides_the_profile() -> None:

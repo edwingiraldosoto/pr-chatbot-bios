@@ -8,6 +8,11 @@ de la configuración (CA-R1.6):
 * ``output_config.effort`` = ``LLM_ANTHROPIC_EFFORT`` (``low`` por defecto): Haiku 5.5
   razona por defecto y esos tokens cuentan dentro de ``max_tokens``; con ``low`` respondió
   sin razonamiento. Vacío = no se envía (Haiku 4.5 y anteriores lo rechazan).
+* ``thinking`` = ``{"type": LLM_ANTHROPIC_THINKING}`` (``disabled`` por defecto). El 2026-11-07
+  se vio que ``effort = "low"`` no basta: ante una pregunta con varios temas ("Vacaciones,
+  extras, equipo") Haiku 5.5 razonó hasta agotar los 600 tokens y la respuesta llegó cortada
+  en 2 de 3 intentos; con ``disabled`` respondió completa en 3 de 3 (270-380 tokens).
+* ``stop_reason == "max_tokens"`` marca el resultado como ``truncated``.
 """
 
 from __future__ import annotations
@@ -43,10 +48,12 @@ class AnthropicProvider:
         model: str,
         timeout_seconds: float,
         effort: str | None = "low",
+        thinking: str | None = "disabled",
         client: anthropic.AsyncAnthropic | None = None,
     ) -> None:
         self.model = model
         self.effort = effort
+        self.thinking = thinking
         self._client = client or anthropic.AsyncAnthropic(
             api_key=api_key, timeout=timeout_seconds, max_retries=0
         )
@@ -63,6 +70,8 @@ class AnthropicProvider:
         }
         if self.effort:
             params["output_config"] = {"effort": self.effort}
+        if self.thinking:
+            params["thinking"] = {"type": self.thinking}
         return params
 
     async def complete(
@@ -105,4 +114,5 @@ class AnthropicProvider:
             input_tokens=response.usage.input_tokens,
             output_tokens=response.usage.output_tokens,
             model=response.model,
+            truncated=response.stop_reason == "max_tokens",
         )

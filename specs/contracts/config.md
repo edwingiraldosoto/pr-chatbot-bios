@@ -18,6 +18,7 @@ defecto. Las variables de entorno usan el nombre de la columna "Variable".
 | `LLM_ANTHROPIC_API_KEY` | — | secreto | — | `.env` | CA-R1.6 |
 | `LLM_ANTHROPIC_MODEL` | `anthropic.model` | str | `claude-haiku-5-5` | yaml | CA-R1.6 |
 | `LLM_ANTHROPIC_EFFORT` | `anthropic.effort` | `low` \| `medium` \| `high` \| `xhigh` \| `max` \| vacío (no se envía) | `low` | yaml | CA-R1.6 (R-05) |
+| `LLM_ANTHROPIC_THINKING` | `anthropic.thinking` | `disabled` \| `adaptive` \| vacío (no se envía) | `disabled` | yaml | CA-R1.6 (R-05) |
 | `LLM_OPENAI_API_KEY` | — | secreto | — | `.env` | CA-R1.6 |
 | `LLM_OPENAI_MODEL` | `openai.model` | str | `gpt-5-mini` | yaml | CA-R1.6 |
 | `LLM_OPENAI_BASE_URL` | `openai.base_url` | URL o vacío (API oficial) | vacío | yaml | CA-R1.4 |

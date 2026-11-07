@@ -8,6 +8,7 @@ import pytest
 import structlog
 
 from mesa_ayuda.answering import (
+    TRUNCATED_NOTE,
     AnswerService,
     Outcome,
     Source,
@@ -16,7 +17,7 @@ from mesa_ayuda.answering import (
     is_not_found,
 )
 from mesa_ayuda.embeddings import FakeEmbedder
-from mesa_ayuda.llm.base import ChatMessage, LLMUnavailableError
+from mesa_ayuda.llm.base import ChatMessage, LLMResult, LLMUnavailableError
 from mesa_ayuda.llm.fake import FakeProvider
 from mesa_ayuda.retrieval import Retriever
 from mesa_ayuda.rewriter import QuestionRewriter
@@ -272,3 +273,40 @@ def test_source_labels() -> None:
         'Fuentes: a.md, sección "Intro"; b.pdf, página 2; c.docx, sección "Tabla", página 4; d.txt.'
     )
     assert format_sources([]) == ""
+
+
+# --- Respuesta cortada por LLM_MAX_TOKENS ---------------------------------------------------
+# Visto en Telegram (2026-11-07): "Vacaciones, extras, equipo" llegó como "…ni cómo pedir vac"
+# porque el razonamiento del modelo gastó casi todo el límite de salida.
+
+
+def truncated(text: str) -> LLMResult:
+    return LLMResult(text=text, input_tokens=100, output_tokens=600, model="m", truncated=True)
+
+
+async def test_truncated_answer_never_ends_mid_word() -> None:
+    fake = FakeProvider(
+        replies=[
+            truncated("Tienes 15 días hábiles [1]. Las colectivas se descuentan. Para pedir vac")
+        ]
+    )
+
+    with structlog.testing.capture_logs() as logs:
+        answer = await service(fake, [VACATIONS]).answer("Vacaciones, extras, equipo")
+
+    assert answer.found
+    assert answer.text == (
+        "Tienes 15 días hábiles. Las colectivas se descuentan.\n\n" + TRUNCATED_NOTE
+    )
+    assert answer.sources == [Source("politica_vacaciones.md", "2. Días de vacaciones")]
+    assert any(log["event"] == "answer_truncated" for log in logs)
+
+
+async def test_truncated_answer_without_a_complete_sentence_is_not_found() -> None:
+    fake = FakeProvider(replies=[truncated("Sobre vacaciones, la empresa programa vac")])
+
+    with structlog.testing.capture_logs() as logs:
+        answer = await service(fake, [VACATIONS]).answer("Vacaciones, extras, equipo")
+
+    assert answer.outcome is Outcome.LLM_NOT_FOUND
+    assert any(log["event"] == "answer_truncated" for log in logs)
