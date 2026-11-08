@@ -1,6 +1,6 @@
 # Política de vacaciones
 
-Nubeverde S.A.S. (empresa ficticia). Código: GH-POL-004. Versión 3, vigente desde el
+NubeVerde S.A.S. (empresa ficticia). Código: GH-POL-004. Versión 3, vigente desde el
 1 de febrero de 2026. Responsable: Dirección de Gestión Humana.
 
 ## 1. Alcance

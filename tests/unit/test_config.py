@@ -319,10 +319,10 @@ def test_invite_code_is_optional_secret_and_validated(
     # CA-07.5: sin código no hay invitaciones; con código, se redacta en los logs.
     assert load_settings(config_dir / "config.yaml", env_file=None).invite_code is None
 
-    monkeypatch.setenv("INVITE_CODE", "bios-evaluacion-7Kq2xZ")
+    monkeypatch.setenv("INVITE_CODE", "nubeverde-evaluacion-7Kq2xZ")
     settings = load_settings(config_dir / "config.yaml", env_file=None)
     assert settings.invite_code is not None
-    assert "bios-evaluacion-7Kq2xZ" in settings.secret_values()
+    assert "nubeverde-evaluacion-7Kq2xZ" in settings.secret_values()
 
     for bad in ("corto", "con espacio y tilde á", "x" * 65):
         monkeypatch.setenv("INVITE_CODE", bad)
@@ -331,7 +331,7 @@ def test_invite_code_is_optional_secret_and_validated(
 
 
 def test_invite_code_in_yaml_is_rejected(secrets_env: dict[str, str], config_dir: Path) -> None:
-    (config_dir / "config.yaml").write_text("invite_code: bios-evaluacion-7Kq2xZ\n", "utf-8")
+    (config_dir / "config.yaml").write_text("invite_code: nubeverde-evaluacion-7Kq2xZ\n", "utf-8")
 
     with pytest.raises(ConfigError):
         load_settings(config_dir / "config.yaml", env_file=None)

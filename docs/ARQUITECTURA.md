@@ -268,7 +268,7 @@ completo de trabajo. …
 ## Estructura de carpetas
 
 ```text
-pr-chatbot-bios/
+pr-chatbot-nubeverde/
 ├── knowledge_base/            # documentos que alimentan al asistente (4 de ejemplo: md, pdf, docx, txt)
 ├── prompts/
 │   ├── system_prompt.md       # reglas de la respuesta (SYSTEM_PROMPT_PATH)
@@ -311,7 +311,7 @@ pr-chatbot-bios/
 ```
 
 La estructura sigue la sugerida por el enunciado. Las diferencias:
-- **Nombre del repositorio:** `pr-chatbot-bios` en vez de `mesa-ayuda-rag`. El nombre del
+- **Nombre del repositorio:** `pr-chatbot-nubeverde` en vez de `mesa-ayuda-rag`. El nombre del
   paquete Python es `mesa_ayuda`.
 - **`scripts/`:** se agregó para la evaluación y la exportación.
 - **`.claude/` y `.specify/`:** se versionan para que se vea cómo se usó Spec Kit.

@@ -16,7 +16,7 @@ from mesa_ayuda.storage import InvitedUser
 TELEGRAM_LIMIT = 4096  # caracteres por mensaje, medidos en unidades UTF-16
 
 START = (
-    "Hola. Soy el asistente de la mesa de ayuda Nube Verde.\n\n"
+    "Hola. Soy el asistente de la mesa de ayuda NubeVerde.\n\n"
     "Respondo preguntas sobre los documentos internos de la empresa: políticas, "
     "procedimientos y guías. Solo uso esos documentos; si algo no está en ellos, te lo digo.\n\n"
     "Escríbeme tu pregunta como se la harías a un compañero. Por ejemplo: "

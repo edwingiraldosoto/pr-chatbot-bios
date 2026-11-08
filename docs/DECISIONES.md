@@ -696,7 +696,7 @@ token (D-01). El README lo advierte.
 - Las correcciones van en commits `fix:` aparte, con la misma tarea.
 - Cada cambio de diseño se registra antes en `specs/` con un commit `docs:`.
 - Spec Kit (`.claude/`, `.specify/`) se versiona.
-- El repositorio se llama `pr-chatbot-bios` en lugar del `mesa-ayuda-rag` sugerido.
+- El repositorio se llama `pr-chatbot-nubeverde` en lugar del `mesa-ayuda-rag` sugerido.
 
 **Justificación.**
 - Con un solo autor, los pull requests no aportan revisión. El valor que buscaban (ver

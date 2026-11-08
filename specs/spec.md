@@ -7,7 +7,7 @@
 **Estado**: Aprobada para planeación
 
 **Entrada**: Enunciado "Prueba técnica – Asistente de mesa de ayuda con RAG en Telegram"
-(Servicios Grupo Bios S.A.S., 2026-11-06) y notas de diseño del autor.
+(Servicios NubeVerde S.A.S., 2026-11-06) y notas de diseño del autor.
 
 > Generada con GitHub Spec Kit (`/speckit-specify`, plantilla `spec-template` traducida al
 > español). Describe **qué** hace el sistema y **para quién**; el **cómo** está en

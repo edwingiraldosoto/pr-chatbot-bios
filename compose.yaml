@@ -12,7 +12,7 @@
 services:
   bot:
     build: .
-    image: mesa-ayuda-bios
+    image: mesa-ayuda-nubeverde
     env_file: .env
     restart: unless-stopped
     volumes:

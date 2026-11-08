@@ -163,7 +163,7 @@ Cambio pedido por el autor el 2026-11-06 para la evaluación (CA-07.5, RNF-08, p
 Tareas agregadas después de S10 por un error visto en la prueba real en Telegram: la pregunta
 "Vacaciones, extras, equipo" llegó cortada a mitad de palabra.
 
-- [x] T-55 Reintento de una respuesta cortada con `LLM_TRUNCATED_RETRY_MAX_TOKENS` (1200; 0 lo desactiva) y, si también se corta y no queda una oración completa, conservar las palabras completas en lugar de responder "no encontrado"; repetir la evaluación con los documentos Nubeverde — `src/mesa_ayuda/answering.py`, `src/mesa_ayuda/config.py`, `config.yaml`, `.env.example`, `docs/EVALUACION.md` — RF-03, RNF-01, RNF-05 (CA-R5.8)
+- [x] T-55 Reintento de una respuesta cortada con `LLM_TRUNCATED_RETRY_MAX_TOKENS` (1200; 0 lo desactiva) y, si también se corta y no queda una oración completa, conservar las palabras completas en lugar de responder "no encontrado"; repetir la evaluación con los documentos NubeVerde — `src/mesa_ayuda/answering.py`, `src/mesa_ayuda/config.py`, `config.yaml`, `.env.example`, `docs/EVALUACION.md` — RF-03, RNF-01, RNF-05 (CA-R5.8)
 - [x] T-54 Respuesta cortada por `LLM_MAX_TOKENS`: `thinking: disabled` en Anthropic, marca `truncated` en los tres adaptadores, recorte a la última oración completa con aviso que no pasa al historial; repetir la evaluación — `src/mesa_ayuda/llm/`, `src/mesa_ayuda/answering.py`, `config.yaml`, `docs/EVALUACION.md` — RF-03, RNF-05 (CA-R5.8)
 
 ---
@@ -212,7 +212,7 @@ Estado al momento de la entrega (se actualiza al cerrar cada fase).
 | T-08 | RF-01 | S3 | Terminada | `7729028` |
 | T-09 | RF-01 | S3 | Terminada | `aa4c9a3` |
 | T-10 | RF-02 | S3 | Terminada | `df82086` |
-| T-11 | Enunciado §8 | S3 | Terminada (renombrada a GrupoBios en `8031edb` y devuelta a Nubeverde en `5f652d0`) | `ae8f903`, `8031edb`, `5f652d0` |
+| T-11 | Enunciado §8 | S3 | Terminada | `ae8f903`, `8031edb`, `5f652d0` |
 | T-12 | RF-02 | S4 | Terminada | `02e63d6` |
 | T-13 | RF-02 | S4 | Terminada | `2ef87e7` |
 | T-14 | RF-09 | S4 | Terminada | `2440903` |

@@ -13,7 +13,7 @@ Funciona con RAG (*Retrieval-Augmented Generation*):
 
 Agregar o cambiar un documento basta para que el bot responda sobre él, sin tocar código.
 
-Prueba técnica para Servicios Grupo Bios S.A.S., construida con *Spec Driven Development*:
+Prueba técnica para Servicios NubeVerde S.A.S., construida con *Spec Driven Development*:
 la especificación de `specs/` se escribió antes que el código y se actualizó cada vez que
 una decisión cambió.
 
@@ -139,7 +139,7 @@ Para que otra persona use el bot sin conocer su ID por adelantado, define un có
 `.env`:
 
 ```ini
-INVITE_CODE=bios-evaluacion-cambia-esto   # 12 a 64 caracteres: letras sin tilde, números, _ y -
+INVITE_CODE=nubeverde-evaluacion-cambia-esto   # 12 a 64 caracteres: letras sin tilde, números, _ y -
 ```
 
 Reinicia el bot y envíale `/invitacion` desde una cuenta de administrador. Te responde con
@@ -370,5 +370,5 @@ están en [`docs/EVALUACION.md`](docs/EVALUACION.md).
 | [`prompts/`](prompts/) | Prompt de sistema y de reformulación |
 | [`config.yaml`](config.yaml), [`.env.example`](.env.example) | Todos los parámetros, comentados |
 
-Los documentos de `knowledge_base/` son de una empresa ficticia (Nubeverde S.A.S.) y se
+Los documentos de `knowledge_base/` son de una empresa ficticia (NubeVerde S.A.S.) y se
 redactaron con ayuda de IA.

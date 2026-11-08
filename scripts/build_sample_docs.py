@@ -1,7 +1,7 @@
 """Genera los documentos de ejemplo binarios de ``knowledge_base/`` (PDF y DOCX).
 
 El ``.md`` y el ``.txt`` se editan a mano. Este script deja reproducibles los otros dos:
-``python -m scripts.build_sample_docs``. El contenido es ficticio (empresa Nubeverde S.A.S.)
+``python -m scripts.build_sample_docs``. El contenido es ficticio (empresa NubeVerde S.A.S.)
 y se redactó con ayuda de IA (ver ``docs/USO_IA.md``).
 """
 
@@ -18,7 +18,7 @@ KNOWLEDGE_BASE = Path(__file__).resolve().parents[1] / "knowledge_base"
 
 REIMBURSEMENT_PAGES = [
     """POLÍTICA DE REEMBOLSO DE GASTOS
-Nubeverde S.A.S. (empresa ficticia) - Código FIN-POL-002 - Vigente desde el 1 de enero de 2026
+NubeVerde S.A.S. (empresa ficticia) - Código FIN-POL-002 - Vigente desde el 1 de enero de 2026
 Responsable: Dirección Financiera
 
 1. OBJETIVO
@@ -39,7 +39,7 @@ Los gastos que superen el tope solo se reembolsan con aprobación escrita de la 
 5. ANTICIPOS
 Para viajes de más de 2 días se puede pedir un anticipo de hasta el 70 % del presupuesto estimado. El anticipo se legaliza con el mismo formulario de reembolso y el saldo a favor de la empresa se descuenta de la nómina siguiente.""",
     """6. CÓMO SOLICITAR EL REEMBOLSO
-Paso 1: Reúne las facturas electrónicas a nombre de Nubeverde S.A.S., NIT 900.000.000-1. No se aceptan tiquetes de máquina registradora ni cuentas de cobro sin factura.
+Paso 1: Reúne las facturas electrónicas a nombre de NubeVerde S.A.S., NIT 900.000.000-1. No se aceptan tiquetes de máquina registradora ni cuentas de cobro sin factura.
 Paso 2: Diligencia el formulario de reembolso en el portal Mi Nube, menú "Finanzas" > "Reembolsos", y adjunta las facturas en PDF.
 Paso 3: Envía la solicitud a más tardar 30 días calendario después de la fecha del gasto. Las solicitudes posteriores se rechazan.
 Paso 4: Tu jefe inmediato aprueba la solicitud y luego la revisa Contabilidad.
@@ -59,13 +59,13 @@ def build_reimbursement_pdf(target: Path) -> None:
 def build_it_support_docx(target: Path) -> None:
     document = docx.Document()
     props = document.core_properties
-    props.author = "Nubeverde S.A.S."
+    props.author = "NubeVerde S.A.S."
     props.title = "Guía de soporte de TI"
     props.created = props.modified = dt.datetime(2026, 1, 15, tzinfo=dt.UTC)
 
     document.add_heading("Guía de soporte de TI", level=0)
     document.add_paragraph(
-        "Nubeverde S.A.S. (empresa ficticia). Código TI-GUI-001. Versión 2, vigente desde el "
+        "NubeVerde S.A.S. (empresa ficticia). Código TI-GUI-001. Versión 2, vigente desde el "
         "15 de enero de 2026. Responsable: Coordinación de Tecnología."
     )
 

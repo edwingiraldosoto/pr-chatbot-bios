@@ -173,8 +173,8 @@ def test_negative_window_is_rejected() -> None:
 @pytest.mark.parametrize(
     ("text", "payload"),
     [
-        ("/start bios-evaluacion-7Kq2xZ", "bios-evaluacion-7Kq2xZ"),
-        ("/start@mesa_bot bios-evaluacion-7Kq2xZ", "bios-evaluacion-7Kq2xZ"),
+        ("/start nubeverde-evaluacion-7Kq2xZ", "nubeverde-evaluacion-7Kq2xZ"),
+        ("/start@mesa_bot nubeverde-evaluacion-7Kq2xZ", "nubeverde-evaluacion-7Kq2xZ"),
         ("/start", None),
         ("/help codigo", None),
         ("hola codigo", None),
@@ -186,13 +186,13 @@ def test_invite_payload(text: str | None, payload: str | None) -> None:
 
 
 def test_invite_matches_only_the_exact_code() -> None:
-    assert invite_matches("bios-evaluacion-7Kq2xZ", "bios-evaluacion-7Kq2xZ")
-    assert not invite_matches("bios-evaluacion-7kq2xz", "bios-evaluacion-7Kq2xZ")
-    assert not invite_matches("bios-evaluacion", "bios-evaluacion-7Kq2xZ")
+    assert invite_matches("nubeverde-evaluacion-7Kq2xZ", "nubeverde-evaluacion-7Kq2xZ")
+    assert not invite_matches("nubeverde-evaluacion-7kq2xz", "nubeverde-evaluacion-7Kq2xZ")
+    assert not invite_matches("nubeverde-evaluacion", "nubeverde-evaluacion-7Kq2xZ")
 
 
 def test_fingerprint_hides_the_code_and_changes_with_it() -> None:
-    first = invite_fingerprint("bios-evaluacion-7Kq2xZ")
+    first = invite_fingerprint("nubeverde-evaluacion-7Kq2xZ")
 
     assert len(first) == 64 and "evaluacion" not in first
-    assert first != invite_fingerprint("bios-evaluacion-7Kq2xY")
+    assert first != invite_fingerprint("nubeverde-evaluacion-7Kq2xY")

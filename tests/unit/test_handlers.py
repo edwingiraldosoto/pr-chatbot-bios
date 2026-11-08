@@ -644,7 +644,7 @@ async def test_greeting_with_a_question_is_a_question(storage: Storage, index: F
 
 # --- Invitaciones (T-52; CA-07.5) -----------------------------------------------------------
 
-CODE = "bios-evaluacion-7Kq2xZ"
+CODE = "nubeverde-evaluacion-7Kq2xZ"
 
 
 async def test_invite_link_authorizes_and_survives_a_restart(
@@ -664,7 +664,7 @@ async def test_invite_link_authorizes_and_survives_a_restart(
 
 
 @pytest.mark.parametrize(
-    "text", [f"/start {CODE}x", "/start bios-evaluacion", "/start", f"/help {CODE}", CODE]
+    "text", [f"/start {CODE}x", "/start nubeverde-evaluacion", "/start", f"/help {CODE}", CODE]
 )
 async def test_anything_but_the_exact_link_is_denied(
     storage: Storage, index: FakeIndex, text: str
@@ -685,7 +685,7 @@ async def test_without_invite_code_nobody_gets_in_by_link(
 async def test_changing_the_code_revokes_every_invitee(storage: Storage, index: FakeIndex) -> None:
     async with TelegramHarness(make_handlers(storage, index, invite_code=CODE)) as bot:
         await bot.send(STRANGER, f"/start {CODE}")
-    new_code = "bios-evaluacion-nuevo-99"
+    new_code = "nubeverde-evaluacion-nuevo-99"
 
     async with TelegramHarness(make_handlers(storage, index, invite_code=new_code)) as bot:
         assert await bot.send(STRANGER, "/fuentes") == [messages.access_denied(STRANGER)]

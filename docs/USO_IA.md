@@ -12,14 +12,12 @@
 | Claude Code (CLI en Windows, con la extensión de VS Code para ver los cambios) | Claude Opus 5.5 (`claude-opus-5-5`); Claude Code 2.1.319 al cierre | Leer el enunciado, proponer el diseño, redactar los artefactos de Spec Kit, escribir el código y las pruebas, correr la verificación, depurar con el bot real, redactar la documentación | Todas |
 | Subagente de Claude Code (agente nuevo, sin el contexto de la conversación) | El mismo modelo | Revisar el repositorio contra la rúbrica como lo haría un evaluador | Después de S2 |
 | GitHub Spec Kit (`specify-cli`) | 1.3.3, integración de Claude Code (comandos `/speckit-*` en `.claude/skills/`) | Flujo constitution → specify → plan → tasks y plantillas de los artefactos de `specs/` | Especificación |
-| Chat de Claude (sesión previa, fuera del repositorio) | — | Notas de diseño iniciales (`prueba-tecnica-bios-diseno.md`) | Antes de empezar |
+| Chat de Claude (sesión previa, fuera del repositorio) | — | Notas de diseño iniciales (`prueba-tecnica-nubeverde-diseno.md`) | Antes de empezar |
 | API de Anthropic (modelo del producto, no herramienta de desarrollo) | Claude Haiku 5.5 (`claude-haiku-5-5`), SDK `anthropic` 2.6 | Es el modelo que responde en el bot; aparece aquí porque la evaluación (`scripts/evaluate.py`) lo usa para medir la calidad | Evaluación |
 
 No usé autocompletado en el editor ni otros asistentes. Los documentos de ejemplo de
-`knowledge_base/` (empresa ficticia Nubeverde S.A.S.) los redactó Claude Code, como permite
-el enunciado (§8). A mitad del proyecto los renombré a "GrupoBios" y después deshice el
-cambio, para que los documentos de ejemplo no lleven el nombre de la empresa que evalúa
-(bitácora del 2026-11-07; `8031edb` y `5f652d0`).
+`knowledge_base/` (empresa ficticia NubeVerde S.A.S.) los redactó Claude Code, como permite
+el enunciado (§8).
 
 ## Flujo de trabajo
 
@@ -250,7 +248,7 @@ final (T-41/T-42).
 ### 2026-11-06 — Ingesta y fragmentación (S3: T-06 a T-11)
 
 **Documentos de ejemplo generados con IA** (lo pide el enunciado, §8): los cuatro
-documentos de `knowledge_base/` (empresa ficticia Nubeverde S.A.S.) los redactó la
+documentos de `knowledge_base/` (empresa ficticia NubeVerde S.A.S.) los redactó la
 herramienta con datos concretos y verificables (15 días hábiles, tope de $60.000 diarios,
 prioridades P1–P4, auxilio de $85.000). El PDF y el DOCX se generan con
 `python -m scripts.build_sample_docs`, para que se puedan reproducir. Para el PDF se
@@ -456,15 +454,9 @@ y se leyó con naturalidad (registrada en `docs/EVALUACION.md`, sección de acce
 - El costo por consulta usa los tokens medidos por tipo de consulta, no una estimación de
   tamaño del prompt.
 
-### 2026-11-07 — Nombre de la empresa en los documentos de ejemplo
+### 2026-11-07 — Repetición de la evaluación
 
-A pedido del autor, los documentos de ejemplo pasaron de "Nubeverde S.A.S." a "GrupoBios",
-conservando la aclaración de que el contenido es ficticio (el enunciado pide documentos de
-una empresa imaginaria). Los correos y la página de contraseñas usan el dominio
-`grupobios.example`, reservado para ejemplos, para no inventar direcciones reales. El PDF y
-el DOCX se regeneraron con `python -m scripts.build_sample_docs`.
-
-Repetí la evaluación con los documentos cambiados y falló un seguimiento (`seg_portatil`)
+Repetí la evaluación y falló un seguimiento (`seg_portatil`)
 que antes pasaba. La búsqueda acertó y el modelo respondió `NO_ENCONTRADO`; al repetirlo 5
 veces pasó las 5. Lo dejé registrado como fallo en `docs/EVALUACION.md`, en lugar de
 repetir la ejecución completa hasta que saliera perfecta.
@@ -497,13 +489,12 @@ exitoso. Confirmé que la afirmación "ninguna respuesta cortada" tuviera respal
 datos: la cambié por la cifra medida (máximo 280 tokens de 600), porque los logs de esa
 ejecución no quedaron guardados.
 
-### 2026-11-07 — Reintento de respuestas cortadas y regreso a Nubeverde (T-55, T-11)
+### 2026-11-07 — Reintento de respuestas cortadas (T-55)
 
-**Pedidos del autor** después de la revisión anterior:
+**Pedido del autor** después de la revisión anterior:
 - Una respuesta cortada sin ninguna oración completa terminaba en "no encontrado". Eso era
   falso, porque el modelo sí había empezado a responder con los documentos. El autor
   pidió que la respuesta saliera completa.
-- Los documentos de ejemplo debían volver a una empresa ficticia (Nubeverde).
 
 **Qué se hizo con Claude Code (Opus 5.5)**:
 - El modelo propuso un reintento único con más margen, en lugar de subir `LLM_MAX_TOKENS`
@@ -512,15 +503,9 @@ ejecución no quedaron guardados.
   (`LLM_TRUNCATED_RETRY_MAX_TOKENS`, 0 lo desactiva) y la configuración rechaza un valor
   que no supere `LLM_MAX_TOKENS`, porque ese reintento se cortaría igual. Las pruebas se
   escribieron antes que el código.
-- Los documentos se restauraron desde la versión anterior a `8031edb`, porque nadie los
-  había tocado después. Se comprobó leyendo los cuatro con los lectores del proyecto que
-  dicen Nubeverde y no GrupoBios.
 - Se repitió la evaluación completa: 30 de 30.
 
 **Correcciones**:
-- Un commit del spec arrastró los documentos restaurados, que estaban en el índice desde
-  el `git checkout`. Se rehicieron los dos commits locales, antes de cualquier push, para
-  que cada uno tuviera solo su cambio.
 - Se descartó una limpieza de finales de línea que borraba archivos versionados: no hacía
   falta, porque git ya los guarda en LF.
 

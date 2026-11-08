@@ -252,7 +252,7 @@ comentado. Todo lo demás sale de `config.yaml`.
 | `LLM_OPENAI_API_KEY` | Sin valor | Ídem | Key de OpenAI o de la API compatible de `LLM_OPENAI_BASE_URL` | Sí, si `LLM_PROVIDER=openai` |
 | `LLM_GEMINI_API_KEY` | Sin valor | Ídem | Key de Google Gemini | Sí, si `LLM_PROVIDER=gemini` |
 | `LLM_API_KEY` | Sin valor | `Settings._provider_key()` (respaldo) | Genérica del enunciado: se usa si el proveedor activo no tiene su propia key | No |
-| `INVITE_CODE` | Comentado. Ejemplo: `bios-evaluacion-cambia-esto` (12 a 64 caracteres `A-Z a-z 0-9 _ -`) | `BotHandlers` (`invite_code`, `_invite_hash`) | Activa el enlace `https://t.me/<bot>?start=<código>` | No |
+| `INVITE_CODE` | Comentado. Ejemplo: `nubeverde-evaluacion-cambia-esto` (12 a 64 caracteres `A-Z a-z 0-9 _ -`) | `BotHandlers` (`invite_code`, `_invite_hash`) | Activa el enlace `https://t.me/<bot>?start=<código>` | No |
 | `ALLOWED_USER_IDS` | Por defecto `[]`. Ejemplo: `111111111,222222222` | `AccessControl` en `__main__.build()` | IDs de Telegram autorizados. Si se define en `.env`, reemplaza `access.allowed_user_ids` | En la práctica sí: con las dos listas vacías nadie entra (falla cerrada) |
 | `ADMIN_USER_IDS` | Por defecto `[]`. Ejemplo: `111111111` | `AccessControl` | Administradores: tienen acceso y pueden usar `/reindex`, `/invitacion`, `/invitados` y `/revocar` | Recomendada |
 
@@ -684,7 +684,7 @@ dependen del proveedor.
 
 | Clave | Valor | Efecto |
 |---|---|---|
-| `build: .` / `image` | `mesa-ayuda-bios` | Construye desde el `Dockerfile` de la raíz |
+| `build: .` / `image` | `mesa-ayuda-nubeverde` | Construye desde el `Dockerfile` de la raíz |
 | `env_file` | `.env` | Pasa todas las variables del `.env` **al crear** el contenedor |
 | `restart` | `unless-stopped` | Se reinicia solo si se cae, salvo que lo detengas |
 | `volumes` | `./knowledge_base:/app/knowledge_base:ro` | La carpeta del equipo tapa la copia de la imagen. Basta editarla y enviar `/reindex` |
@@ -729,8 +729,8 @@ respuesta**.
 - No corras el bot local y el contenedor a la vez con el mismo token: Telegram solo
   entrega los mensajes a un proceso.
 - La primera vez el contenedor descarga el modelo al volumen (unos 450 MB).
-- **Estado actual:** la imagen `mesa-ayuda-bios` de este equipo se construyó antes de los
-  últimos cambios del 2026-11-07 (documentos Nubeverde, reintento de respuestas cortadas,
+- **Estado actual:** la imagen `mesa-ayuda-nubeverde` de este equipo se construyó antes de los
+  últimos cambios del 2026-11-07 (reintento de respuestas cortadas,
   saludo). Para usarlos en Docker hay que correr `docker compose up -d --build`.
 
 ---

@@ -346,7 +346,7 @@ class Settings(BaseSettings):
         if value is not None and not _INVITE_RE.fullmatch(value.get_secret_value()):
             raise ValueError(
                 "debe tener de 12 a 64 caracteres, solo letras sin tilde, números, _ y - "
-                "(ejemplo: bios-evaluacion-7Kq2xZ)"
+                "(ejemplo: nubeverde-evaluacion-7Kq2xZ)"
             )
         return value
 
