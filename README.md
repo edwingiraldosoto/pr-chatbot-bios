@@ -248,7 +248,10 @@ respuesta más larga de 4.096 caracteres se divide en varios mensajes.
 
 **Con los documentos de tu organización**: cambia `COMPANY_NAME` en el `.env` (o
 `bot.company_name` en `config.yaml`) por el nombre de tu empresa, para que la bienvenida de
-`/start` no diga NubeVerde, la empresa ficticia de los ejemplos. Se aplica al reiniciar.
+`/start` no diga NubeVerde, la empresa ficticia de los ejemplos. No hay que tocar código:
+sin Docker, basta con reiniciar el bot; con Docker, un cambio en el `.env` se aplica con
+`docker compose up -d --force-recreate` y uno en `config.yaml` (que va dentro de la imagen)
+con `docker compose up -d --build`.
 
 **Cómo citar mejor**: el bot cita la sección (encabezados de Markdown o estilos "Título"
 de Word) o la página (PDF). Un documento con títulos claros produce citas más útiles.
