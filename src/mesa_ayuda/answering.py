@@ -237,6 +237,7 @@ class AnswerService:
         retrieval = await asyncio.to_thread(self._retriever.retrieve, rewrite.question)
 
         def finish(answer: Answer, **extra: object) -> Answer:
+            """Deja el resultado en el log y devuelve la respuesta tal cual."""
             log.info(
                 "answer_outcome",
                 outcome=answer.outcome.value,

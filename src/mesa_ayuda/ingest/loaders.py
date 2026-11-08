@@ -79,15 +79,18 @@ class _HeadingTracker:
         self._lines: list[str] = []
 
     def heading(self, level: int, title: str) -> None:
+        """Empieza una sección: cierra la anterior y ubica este título en su nivel."""
         self._flush()
         while self._path and self._path[-1][0] >= level:
             self._path.pop()
         self._path.append((level, title))
 
     def line(self, text: str) -> None:
+        """Suma una línea de texto a la sección que está abierta."""
         self._lines.append(text)
 
     def finish(self) -> list[Section]:
+        """Cierra la última sección y entrega todas las encontradas."""
         self._flush()
         return self.sections
 

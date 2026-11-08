@@ -179,6 +179,7 @@ class _YamlSource(PydanticBaseSettingsSource):
     """Fuente de pydantic-settings que entrega los valores ya aplanados de ``config.yaml``."""
 
     def get_field_value(self, field: FieldInfo, field_name: str) -> tuple[Any, str, bool]:
+        """Busca un parámetro en ``config.yaml``. Devuelve ``None`` si no está escrito allí."""
         values = _yaml_values.get() or {}
         return values.get(field_name), field_name, False
 
@@ -413,6 +414,7 @@ class Settings(BaseSettings):
         origins: dict[str, str] = {}
 
         def pick(generic: str, own: str | None) -> Any:
+            """Toma el primer valor que exista, genérico o del perfil, y anota de dónde salió."""
             label = generic.removeprefix("llm_")
             if getattr(self, generic) is not None:
                 origins[label] = env_name(generic)

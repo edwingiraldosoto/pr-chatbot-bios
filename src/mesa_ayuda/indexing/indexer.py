@@ -114,6 +114,7 @@ class _ReadWriteLock:
 
     @contextmanager
     def read(self) -> Iterator[None]:
+        """Permite buscar en el índice. Espera si hay un escritor trabajando o en cola."""
         with self._condition:
             while self._writer or self._writers_waiting:
                 self._condition.wait()
@@ -128,6 +129,7 @@ class _ReadWriteLock:
 
     @contextmanager
     def write(self) -> Iterator[None]:
+        """Reserva el índice para actualizarlo. Espera a que terminen los lectores de ahora."""
         with self._condition:
             self._writers_waiting += 1
             while self._writer or self._readers:

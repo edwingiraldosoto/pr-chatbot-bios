@@ -552,12 +552,14 @@ class BotHandlers:
         """Muestra "escribiendo…" y lo renueva mientras dura el bloque."""
 
         async def send() -> None:
+            """Manda una vez el aviso "escribiendo…"; si Telegram lo rechaza, sigue."""
             try:
                 await bot.send_chat_action(chat_id, ChatAction.TYPING)
             except TelegramError as error:  # no es motivo para fallar la respuesta
                 log.debug("typing_failed", error=str(error))
 
         async def keep_typing() -> None:
+            """Repite el aviso cada cierto tiempo, hasta que se cancele la tarea."""
             while True:
                 await asyncio.sleep(self.typing_interval)
                 await send()
