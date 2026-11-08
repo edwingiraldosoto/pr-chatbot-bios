@@ -15,7 +15,7 @@
 
 | Comando | Quién | Respuesta | Req. |
 |---|---|---|---|
-| `/start` | autorizado | Bienvenida: qué hace el bot, que responde solo con documentos internos, cómo preguntar | CA-06.1 |
+| `/start` | autorizado | Bienvenida: qué hace el bot, que responde solo con documentos internos, cómo preguntar. Nombra la empresa de `COMPANY_NAME` ("Hola. Soy el asistente de la mesa de ayuda NubeVerde."); vacío, no nombra ninguna | CA-06.1 |
 | `/help` | autorizado | Cómo preguntar, ejemplos, lista de comandos; admins ven además `/reindex` | CA-06.2 |
 | `/reset` | autorizado | Borra su historial: "Listo, borré nuestra conversación." | CA-06.3 |
 | `/fuentes` | autorizado | Lista de documentos `indexed` con número de fragmentos, o "No hay documentos indexados." | CA-06.4 |

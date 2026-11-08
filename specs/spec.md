@@ -7,7 +7,7 @@
 **Estado**: Aprobada para planeación
 
 **Entrada**: Enunciado "Prueba técnica – Asistente de mesa de ayuda con RAG en Telegram"
-(Servicios NubeVerde S.A.S., 2026-11-06) y notas de diseño del autor.
+(Grupo Bios, 2026-11-06) y notas de diseño del autor.
 
 > Generada con GitHub Spec Kit (`/speckit-specify`, plantilla `spec-template` traducida al
 > español). Describe **qué** hace el sistema y **para quién**; el **cómo** está en
@@ -295,7 +295,7 @@ El sistema MUST mantener un historial por usuario para entender preguntas de seg
 
 #### RF-06 — Comandos (O)
 
-- **CA-06.1** `/start` responde con una bienvenida que explica qué hace el bot.
+- **CA-06.1** `/start` responde con una bienvenida que explica qué hace el bot y nombra la empresa configurada en `COMPANY_NAME` (vacío = sin nombre).
 - **CA-06.2** `/help` explica cómo preguntar y lista los comandos del rol del usuario (los de administrador solo se muestran a administradores).
 - **CA-06.3** `/reset` borra el historial de quien lo envía y lo confirma.
 - **CA-06.4** `/fuentes` lista los documentos indexados actualmente (nombre y número de fragmentos), sin incluir eliminados ni ilegibles.
@@ -487,6 +487,7 @@ Pedido del autor: con el bot abierto por invitación, nadie puede agotar los cr�
 | 1.4 | 2026-11-06 | CA-07.5 (enlace de invitación) y RNF-08 (topes diarios y largo máximo de pregunta). | Pedido del autor: que el evaluador entre sin dar su ID antes y sin poder agotar los créditos de la API (`59c79e2`). |
 | 1.5 | 2026-11-07 | CA-R5.8: respuesta cortada por `LLM_MAX_TOKENS` recortada a la última oración completa, con aviso que no pasa al historial. | Prueba real en Telegram: "Vacaciones, extras, equipo" llegó cortada a mitad de palabra porque el modelo razonó hasta agotar el límite (T-54). |
 | 1.6 | 2026-11-07 | CA-R5.8: antes de recortar, un reintento con `LLM_TRUNCATED_RETRY_MAX_TOKENS`; sin oraciones completas se conservan las palabras completas en lugar de responder "no encontrado". | Pedido del autor: la respuesta debe salir completa, y "no encontrado" era falso si el modelo ya había empezado a responder con los documentos (T-55). |
+| 1.7 | 2026-11-08 | CA-06.1: la bienvenida nombra la empresa de `COMPANY_NAME` (`NubeVerde` por defecto; vacío = sin nombre). | Revisión contra el enunciado: el nombre estaba escrito en el código, y §8 dice que el evaluador probará con sus propios documentos; §4.1 pide ajustar el comportamiento sin tocar código (T-56). |
 
 Este registro se completó el 2026-11-07 al revisar la entrega contra el enunciado: las
 versiones 1.1 a 1.4 se habían registrado en `plan.md` y en los commits, pero no aquí.

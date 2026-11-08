@@ -58,6 +58,7 @@ defecto. Las variables de entorno usan el nombre de la columna "Variable".
 | `REINDEX_NOTIFY_ADMINS` | `reindex.notify_admins` | bool | `true` | yaml | CA-11.3 |
 | `INJECTION_CHECK` | `ingest.injection_check` | `off` \| `warn` \| `quarantine` | `warn` | yaml | RF-13 |
 | `SOURCE_DOWNLOAD` | `bot.source_download` | bool | `false` | yaml | RF-14 |
+| `COMPANY_NAME` | `bot.company_name` | texto, máx. 60 (vacío o `none` = sin nombre) | `NubeVerde` | yaml | CA-06.1 |
 
 **Perfiles por proveedor** (CA-R1.6). Cada proveedor tiene su sección en `config.yaml` y
 su API key en `.env`, así que pueden convivir las tres. Cambiar de proveedor es cambiar una
