@@ -13,11 +13,13 @@
 | Subagente de Claude Code (agente nuevo, sin el contexto de la conversación) | El mismo modelo | Revisar el repositorio contra la rúbrica como lo haría un evaluador | Después de S2 |
 | GitHub Spec Kit (`specify-cli`) | 1.3.3, integración de Claude Code (comandos `/speckit-*` en `.claude/skills/`) | Flujo constitution → specify → plan → tasks y plantillas de los artefactos de `specs/` | Especificación |
 | Chat de Claude (sesión previa, fuera del repositorio) | — | Notas de diseño iniciales (`prueba-tecnica-bios-diseno.md`) | Antes de empezar |
-| Claude Haiku 5.5 (`claude-haiku-5-5`) | API de Anthropic | Es el modelo del producto, no una herramienta de desarrollo; aparece aquí porque la evaluación (`scripts/evaluate.py`) lo usa para medir la calidad | Evaluación |
+| API de Anthropic (modelo del producto, no herramienta de desarrollo) | Claude Haiku 5.5 (`claude-haiku-5-5`), SDK `anthropic` 2.6 | Es el modelo que responde en el bot; aparece aquí porque la evaluación (`scripts/evaluate.py`) lo usa para medir la calidad | Evaluación |
 
 No usé autocompletado en el editor ni otros asistentes. Los documentos de ejemplo de
-`knowledge_base/` (empresa GrupoBios, con contenido ficticio) los redactó Claude Code, como permite
-el enunciado (§8).
+`knowledge_base/` (empresa ficticia Nubeverde S.A.S.) los redactó Claude Code, como permite
+el enunciado (§8). A mitad del proyecto los renombré a "GrupoBios" y después deshice el
+cambio, para que los documentos de ejemplo no lleven el nombre de la empresa que evalúa
+(bitácora del 2026-11-07; `8031edb` y `5f652d0`).
 
 ## Flujo de trabajo
 
@@ -136,12 +138,17 @@ producía la herramienta.
   cinco veces.
 - **Docker:** construí la imagen, arranqué el contenedor, hice una llamada real al LLM desde
   adentro y reinicié para confirmar que no se volvía a descargar el modelo.
+- **Los identificadores de los modelos:** no los copié de lo que la herramienta recordaba.
+  Los consulté contra la API de modelos de Anthropic (`client.models.retrieve`), que devuelve
+  el nombre y el contexto de cada uno: `claude-haiku-5-5` ("Claude Haiku 5.5", 1 M de
+  contexto) y `claude-opus-5-5` ("Claude Opus 5.5"). Lo hice porque ya me había pasado que
+  la herramienta estaba desactualizada sobre su propio servicio (T-21).
 - **Las salidas intermedias:** fragmentos del PDF, el prompt final (está en ARQUITECTURA) y
   las 30 respuestas de la evaluación.
 - **Secretos:** `git check-ignore` del `.env`, redacción en los logs con una prueba y, antes
   de entregar, un escaneo del historial de git (S10).
-- **Pendiente:** la prueba con lector de pantalla (TalkBack o VoiceOver) de una respuesta con
-  pasos y fuentes.
+- **El lector de pantalla:** escuché una respuesta del bot con **VoiceOver** en iPhone. Se
+  leyó con naturalidad, incluidos los pasos y la línea de fuentes (RF-12).
 
 ## Proporción generada con IA
 
@@ -243,7 +250,7 @@ final (T-41/T-42).
 ### 2026-11-06 — Ingesta y fragmentación (S3: T-06 a T-11)
 
 **Documentos de ejemplo generados con IA** (lo pide el enunciado, §8): los cuatro
-documentos de `knowledge_base/` (empresa GrupoBios, con contenido ficticio) los redactó la
+documentos de `knowledge_base/` (empresa ficticia Nubeverde S.A.S.) los redactó la
 herramienta con datos concretos y verificables (15 días hábiles, tope de $60.000 diarios,
 prioridades P1–P4, auxilio de $85.000). El PDF y el DOCX se generan con
 `python -m scripts.build_sample_docs`, para que se puedan reproducir. Para el PDF se
@@ -432,8 +439,8 @@ inventadas palabras que venían de las respuestas del asistente. La corregí y c
 contra alternativas y se mantuvieron, con los datos en `docs/EVALUACION.md`. Subir el
 umbral ahorraba centavos a cambio de arriesgar respuestas que sí existen.
 
-**Pendiente**: la prueba con lector de pantalla (TalkBack o VoiceOver) la hace el autor en
-su teléfono.
+**Prueba con lector de pantalla**: el autor escuchó una respuesta con VoiceOver en iPhone
+y se leyó con naturalidad (registrada en `docs/EVALUACION.md`, sección de accesibilidad).
 
 ### 2026-11-07 — Documentación (S9: T-40 a T-44)
 
@@ -523,8 +530,10 @@ Resultados tal cual:
 
 - **Clon limpio siguiendo solo el README** (Windows 11, Python 3.11.9): con los tres
   comandos, la instalación tardó 5,8 min y ocupa 580 MB. El bot quedó listo en 141 s en el
-  primer arranque, con la descarga del modelo incluida. En ese clon pasan las 629 pruebas,
-  ruff y mypy, y también la prueba con el modelo real (`RUN_MODEL_TESTS=1`).
+  primer arranque, con la descarga del modelo incluida. En ese clon pasaron las 629 pruebas
+  de ese momento, ruff y mypy, y también la prueba con el modelo real
+  (`RUN_MODEL_TESTS=1`). Con las pruebas que agregó T-55, hoy son 644 (643 pasan y 1 se
+  omite porque descarga el modelo real).
 - **Escaneo de secretos del historial:** gitleaks 8.21.2 (imagen oficial, repositorio
   montado en solo lectura) revisó 81 commits y no encontró filtraciones. Además busqué los
   valores exactos del token, la API key y el código de invitación en `git log -p --all` y en
@@ -538,7 +547,8 @@ Resultados tal cual:
   TELEGRAM_BOT_TOKEN"), porque se había creado con un `.env` a medio editar y `up --build` no
   lo recreó. Se resolvió con `--force-recreate`, y el README ahora lo explica.
 - **Pendiente del autor antes de entregar:**
-  - la prueba con lector de pantalla;
+  - repetir el escaneo de secretos: gitleaks revisó los 81 commits que existían en S10 y
+    después entraron más (96 al cierre de esta página);
   - fijar el tope de gasto en la consola de Anthropic;
   - revisar con sus palabras `CRITERIO_TECNICO.md` y esta página;
   - hacer el push y dar acceso a luis.sanchez@grupobios.co si el repositorio es privado.
