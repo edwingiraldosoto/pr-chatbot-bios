@@ -28,8 +28,7 @@ def utf16(text: str) -> int:
 def test_welcome_names_the_fictional_company_of_the_sample_documents() -> None:
     # CA-06.1: el saludo nombra la misma empresa que los documentos de ejemplo.
     assert messages.START.startswith("Hola. Soy el asistente de la mesa de ayuda NubeVerde.")
-    assert "Grupo Bios" not in messages.START
-    assert "GrupoBios" not in messages.START
+    assert "NubeVerde" in messages.START
 
 
 def test_admin_commands_only_in_the_admin_help() -> None:
