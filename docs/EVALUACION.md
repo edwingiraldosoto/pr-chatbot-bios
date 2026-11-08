@@ -295,9 +295,11 @@ cifra.
   minibar no son reembolsables").
 - La línea de fuentes es texto corrido: `Fuentes: reembolso_gastos.pdf, página 2.`
 
-**Prueba con lector de pantalla:** pendiente. La hace el autor en su teléfono con TalkBack
-o VoiceOver, escuchando una respuesta con pasos y su línea de fuentes, y queda registrada
-en `docs/USO_IA.md`.
+**Prueba con lector de pantalla:** hecha por el autor con **VoiceOver** en iPhone,
+escuchando una respuesta del bot en Telegram. Se leyó con naturalidad: la respuesta, los
+pasos y la línea de fuentes se entienden sin tener que ver la pantalla. Es la comprobación
+que cierra RF-12, porque las revisiones de arriba solo verifican el texto; esta verifica
+cómo suena.
 
 ## Costo y tiempo
 

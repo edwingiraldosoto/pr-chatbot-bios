@@ -248,7 +248,7 @@ Estado al momento de la entrega (se actualiza al cerrar cada fase).
 | T-36 | RNF-02 | S7 | Terminada | `d1d8c77` |
 | T-37 | RF-14 | S7 | Terminada | `7f4beea` |
 | T-38 | SC-001–SC-003 | S8 | Terminada | `bb8d5a5`, `b4afa16` |
-| T-39 | RF-03–RF-05, RF-12, RNF-04 | S8 | Terminada salvo la prueba con lector de pantalla (la hace el autor) | `550c71c`, `39ec3d5`, `94f7b2f`, `bdc74dd`, `52f3800` |
+| T-39 | RF-03–RF-05, RF-12, RNF-04 | S8 | Terminada (la prueba con lector de pantalla la hizo el autor con VoiceOver) | `550c71c`, `39ec3d5`, `94f7b2f`, `bdc74dd`, `52f3800` |
 | T-40 | RNF-02 | S9 | Terminada | `e235e8b` |
 | T-41 | Enunciado §6.2 | S9 | Terminada | `8faea03` |
 | T-42 | Enunciado §6.3 | S9 | Terminada | `6c94b4a` |
