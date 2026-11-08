@@ -1,0 +1,39 @@
+%% Copia literal del diagrama "Flujo de una pregunta" de docs/ARQUITECTURA.md.
+sequenceDiagram
+    autonumber
+    actor U as Usuario
+    participant TG as Telegram
+    participant H as handlers
+    participant S as SQLite
+    participant A as answering
+    participant RW as rewriter
+    participant R as retrieval + Chroma
+    participant L as LLM
+
+    U->>TG: "¿y se pueden acumular?"
+    TG->>H: Update (polling)
+    H->>H: Filtro común: chat privado → acceso → copia repetida → límite por minuto
+    H->>H: Texto vacío → "solo texto" · saludo → respuesta fija · largo y cupo diario
+    H->>TG: "escribiendo…" (se renueva cada 4 s)
+    H->>S: historial del usuario (últimos HISTORY_LENGTH)
+    H->>A: answer(pregunta, historial)
+    A->>RW: con historial: ¿pregunta autónoma?
+    RW->>L: prompt de reformulación + historial + <pregunta>
+    L-->>RW: "¿Se pueden acumular los días de vacaciones?"
+    A->>R: embedding 'query: …' → top-5 → umbral 0,80
+    alt ningún fragmento pasa el umbral
+        A-->>H: no encontrado (sin llamar al LLM)
+    else hay fragmentos relevantes
+        A->>L: prompt de sistema + historial + <documentos> + <pregunta>
+        L-->>A: texto con marcadores [1] o NO_ENCONTRADO
+        A->>A: quitar marcadores, validar números, armar "Fuentes:" desde metadatos
+    end
+    A-->>H: Answer(texto, fuentes, resultado, tokens)
+    alt encontrada
+        H->>S: guardar el turno (sin la línea de fuentes)
+        H->>TG: respuesta + "Fuentes: …" (en partes si pasa de 4.096)
+    else no encontrada
+        H->>S: registrar en unanswered
+        H->>TG: "No encontré esa información…"
+    end
+    H->>H: log message_handled (resultado, latencia, tokens, fuentes)

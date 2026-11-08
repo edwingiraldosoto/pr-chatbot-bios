@@ -1,0 +1,56 @@
+%% Arquitectura del chatbot MesaAyudaNubeVerde desplegado con Docker Compose.
+%% Fuente: docs/ARQUITECTURA.md (vista general) + compose.yaml + Dockerfile.
+%% Nombres de módulos según src/mesa_ayuda/.
+%%{init: {"layout": "elk", "flowchart": {"curve": "basis"}}}%%
+flowchart TB
+    U([Colaborador<br/>en Telegram]) <-->|mensajes| TG[Telegram Bot API]
+
+    subgraph Docker["Docker Compose · proyecto pr-chatbot-nubeverde"]
+        direction TB
+        subgraph Ctr["Contenedor pr-chatbot-nubeverde-bot-1 · servicio bot · imagen mesa-ayuda-nubeverde"]
+            direction TB
+            H[bot/handlers<br/>filtro común, comandos,<br/>preguntas, botones]
+            G[guards<br/>chat privado, acceso, copias,<br/>límite por minuto]
+            ST[bot/small_talk<br/>saludos sin modelo]
+            A[answering<br/>servicio de respuesta]
+            RW[rewriter<br/>reformula seguimientos]
+            R[retrieval<br/>top-K 5 + umbral 0,80]
+            P[prompting<br/>prompt delimitado]
+            L[llm<br/>adaptadores + reintentos]
+            I[indexing<br/>indexador incremental]
+            IN[ingest<br/>descubrir, leer, fragmentar,<br/>revisar texto sospechoso]
+            E[embeddings<br/>multilingual-e5-small<br/>local ONNX]
+            J[JobQueue<br/>reindexación diaria]
+        end
+        subgraph Vol["Volumen bot-data → /app/data"]
+            direction LR
+            V[(ChromaDB<br/>data/chroma)]
+            S[(SQLite<br/>data/bot.sqlite3)]
+            M[(data/manifest.json)]
+            MD[(data/models<br/>modelo de embeddings)]
+        end
+    end
+
+    KB[["knowledge_base/<br/>montaje de solo lectura"]]
+    ENV[/".env (env_file)<br/>TELEGRAM_BOT_TOKEN<br/>LLM_ANTHROPIC_API_KEY<br/>ALLOWED_USER_IDS · ADMIN_USER_IDS"/]
+    LLM[API de Anthropic<br/>claude-haiku-5-5<br/>· OpenAI · Gemini opcionales]
+
+    TG <-->|long polling HTTPS| H
+    H --> G
+    H --> ST
+    H --> A
+    H --> S
+    A --> RW --> L
+    A --> R --> E
+    R --> V
+    A --> P
+    A --> L
+    L <-->|HTTPS| LLM
+    H -->|/reindex| I
+    J --> I
+    I --> IN --> KB
+    I --> E
+    I --> V
+    I --> M
+    E -.-> MD
+    ENV -.->|variables de entorno| Ctr
