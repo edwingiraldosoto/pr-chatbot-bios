@@ -13,7 +13,7 @@ Funciona con RAG (*Retrieval-Augmented Generation*):
 
 Agregar o cambiar un documento basta para que el bot responda sobre él, sin tocar código.
 
-Prueba técnica para Servicios NubeVerde S.A.S., construida con *Spec Driven Development*:
+Prueba técnica para Grupo Bios, construida con *Spec Driven Development*:
 la especificación de `specs/` se escribió antes que el código y se actualizó cada vez que
 una decisión cambió.
 
@@ -245,6 +245,10 @@ respuesta más larga de 4.096 caracteres se divide en varios mensajes.
   SHA-256.
 - Un documento borrado deja de citarse.
 - Un PDF escaneado sin capa de texto se informa como ilegible (no hay OCR).
+
+**Con los documentos de tu organización**: cambia `COMPANY_NAME` en el `.env` (o
+`bot.company_name` en `config.yaml`) por el nombre de tu empresa, para que la bienvenida de
+`/start` no diga NubeVerde, la empresa ficticia de los ejemplos. Se aplica al reiniciar.
 
 **Cómo citar mejor**: el bot cita la sección (encabezados de Markdown o estilos "Título"
 de Word) o la página (PDF). Un documento con títulos claros produce citas más útiles.

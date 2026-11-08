@@ -165,6 +165,7 @@ Tareas agregadas después de S10 por un error visto en la prueba real en Telegra
 
 - [x] T-55 Reintento de una respuesta cortada con `LLM_TRUNCATED_RETRY_MAX_TOKENS` (1200; 0 lo desactiva) y, si también se corta y no queda una oración completa, conservar las palabras completas en lugar de responder "no encontrado"; repetir la evaluación con los documentos NubeVerde — `src/mesa_ayuda/answering.py`, `src/mesa_ayuda/config.py`, `config.yaml`, `.env.example`, `docs/EVALUACION.md` — RF-03, RNF-01, RNF-05 (CA-R5.8)
 - [x] T-54 Respuesta cortada por `LLM_MAX_TOKENS`: `thinking: disabled` en Anthropic, marca `truncated` en los tres adaptadores, recorte a la última oración completa con aviso que no pasa al historial; repetir la evaluación — `src/mesa_ayuda/llm/`, `src/mesa_ayuda/answering.py`, `config.yaml`, `docs/EVALUACION.md` — RF-03, RNF-05 (CA-R5.8)
+- [x] T-56 Revisión de la entrega contra el enunciado (2026-11-08): el nombre de la empresa ficticia se unifica como NubeVerde (había tres grafías) y se regeneran el PDF y el DOCX; la bienvenida toma la empresa de `COMPANY_NAME` en lugar de tenerla en el código; Docker con nombre de proyecto fijo y `restart: always`; repetir la evaluación — `src/mesa_ayuda/bot/messages.py`, `src/mesa_ayuda/bot/handlers.py`, `src/mesa_ayuda/config.py`, `config.yaml`, `.env.example`, `compose.yaml`, `knowledge_base/`, `docs/EVALUACION.md` — RF-06, RNF-01 (CA-06.1)
 
 ---
 
@@ -175,7 +176,7 @@ Tareas agregadas después de S10 por un error visto en la prueba real en Telegra
 - **S2** no depende de nada. **S3** y **S4** dependen de S2 y bloquean todas las historias.
 - **S5** depende de S4. **S6** depende de S5. **S7** depende de S6.
 - **S8** depende de S6 (y de S7 para los casos de injection desde documentos).
-- **S9** se puede adelantar en paralelo; se cierra después de S8. **S10** es la última de la entrega original; **S11** agrega T-54 y T-55 después de la verificación.
+- **S9** se puede adelantar en paralelo; se cierra después de S8. **S10** es la última de la entrega original; **S11** agrega T-54 y T-55 después de la verificación, y T-56 después de revisar la entrega contra el enunciado.
 
 ### Dependencias entre historias
 
@@ -212,7 +213,7 @@ Estado al momento de la entrega (se actualiza al cerrar cada fase).
 | T-08 | RF-01 | S3 | Terminada | `7729028` |
 | T-09 | RF-01 | S3 | Terminada | `aa4c9a3` |
 | T-10 | RF-02 | S3 | Terminada | `df82086` |
-| T-11 | Enunciado §8 | S3 | Terminada | `ae8f903`, `8031edb`, `5f652d0` |
+| T-11 | Enunciado §8 | S3 | Terminada (cambio de nombre de la empresa y regreso a la ficticia: ver bitácora de `docs/USO_IA.md`, 2026-11-07) | `ae8f903`, `8031edb`, `5f652d0` |
 | T-12 | RF-02 | S4 | Terminada | `02e63d6` |
 | T-13 | RF-02 | S4 | Terminada | `2ef87e7` |
 | T-14 | RF-09 | S4 | Terminada | `2440903` |
@@ -257,6 +258,7 @@ Estado al momento de la entrega (se actualiza al cerrar cada fase).
 | T-45 | RNF-02, RNF-03 | S10 | Terminada (resultados en `docs/USO_IA.md`, 2026-11-07) | `c80f47e` |
 | T-55 | RF-03, RNF-01, RNF-05 | S11 | Terminada | `4d324e6`, `bd648bd`, y los commits de evaluación y documentación que llevan `[T-55]` |
 | T-54 | RF-03, RNF-05 | S11 | Terminada | `4333ac2` (sin la referencia a la tarea en el mensaje), `c7070b5`, `fcc8bae`, y los commits de evaluación y documentación que llevan `[T-54]` |
+| T-56 | RF-06, RNF-01 | S11 | Terminada | `df7d8ea` (sin la referencia a la tarea en el mensaje), `f4963ed`, `97c1d14`, `13bd674` y los commits que llevan `[T-56]` |
 
 ### Cobertura de requisitos
 
@@ -267,7 +269,7 @@ Estado al momento de la entrega (se actualiza al cerrar cada fase).
 | RF-03 | T-05, T-18, T-19, T-25, T-30, T-54, T-55 |
 | RF-04 | T-05, T-18, T-25 |
 | RF-05 | T-24, T-26 |
-| RF-06 | T-29, T-50 |
+| RF-06 | T-29, T-50, T-56 |
 | RF-07 | T-27, T-51, T-52 |
 | RF-08 | T-17, T-31 |
 | RF-09 | T-14, T-15, T-16 |
@@ -276,7 +278,7 @@ Estado al momento de la entrega (se actualiza al cerrar cada fase).
 | RF-12 | T-05, T-28, T-39 |
 | RF-13 | T-34 |
 | RF-14 | T-37 |
-| RNF-01 | T-02, T-03, T-20–T-23, T-46–T-48 |
+| RNF-01 | T-02, T-03, T-20–T-23, T-46–T-48, T-56 |
 | RNF-02 | T-32, T-36, T-40, T-45 |
 | RNF-03 | T-04, T-45 |
 | RNF-04 | T-05, T-19, T-39 |

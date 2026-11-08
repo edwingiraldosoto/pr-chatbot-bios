@@ -1,6 +1,6 @@
 # Evaluación del asistente
 
-> T-38, T-39, T-54 y T-55. Conjunto de 30 casos, script reproducible y calibración. Todas las
+> T-38, T-39, T-54, T-55 y T-56. Conjunto de 30 casos, script reproducible y calibración. Todas las
 > cifras salen de ejecuciones reales del 2026-11-07 y del 2026-11-08 con `claude-haiku-5-5`
 > y el modelo de embeddings local `intfloat/multilingual-e5-small`.
 
@@ -9,7 +9,7 @@
 La columna "Entrega" es la ejecución con la configuración y los documentos que se
 entregan: `anthropic.thinking: disabled` (T-54), reintento de respuestas cortadas (T-55) y
 documentos de la empresa ficticia NubeVerde (detalle en
-[Ejecución de la entrega](#ejecución-de-la-entrega-2026-11-08)). "Antes de T-54" es la
+[Ejecución de la entrega](#ejecución-de-la-entrega-2026-11-08-t-56)). "Antes de T-54" es la
 ejecución que se detalla caso por caso más abajo.
 
 | Criterio | Meta | Entrega | T-55 | Después de T-54 | Antes de T-54 |
@@ -62,7 +62,7 @@ automática solo busca textos.
 Ejecución anterior a T-54 (umbral 0,80, top-K 5, fragmento 800 con solapamiento 150). Lo
 que cambió después está en [Repetición después de T-54](#repetición-después-de-t-54),
 [Ejecución con el reintento](#ejecución-con-el-reintento-t-55) y
-[Ejecución de la entrega](#ejecución-de-la-entrega-2026-11-08).
+[Ejecución de la entrega](#ejecución-de-la-entrega-2026-11-08-t-56).
 
 | Caso | Tipo | Resultado | Fuente citada | Mejor puntaje | Rango |
 |---|---|---|---|---|---|
@@ -185,7 +185,7 @@ repitió la evaluación completa.
   **USD 0,0076** por los 30 casos.
 - Latencia de las 22 respuestas con contenido: mediana 1,2 s y máximo 2,4 s.
 
-## Ejecución de la entrega (2026-11-08)
+## Ejecución de la entrega (2026-11-08, T-56)
 
 El nombre de la empresa se unificó como NubeVerde en los documentos de ejemplo y en el
 saludo del bot; el PDF y el DOCX se regeneraron con `python -m scripts.build_sample_docs`.

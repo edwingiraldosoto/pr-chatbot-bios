@@ -312,6 +312,7 @@ comentado. Todo lo demás sale de `config.yaml`.
 | `REINDEX_TIMEZONE` (`reindex.timezone`) | `America/Bogota` | Reindexación programada y día de los cupos | Zona horaria IANA | No |
 | `REINDEX_NOTIFY_ADMINS` (`reindex.notify_admins`) | `true` | `BotHandlers._notify_admins()` | Avisar a los administradores si la reindexación programada tuvo cambios o errores | No |
 | `SOURCE_DOWNLOAD` (`bot.source_download`) | `false` | `BotHandlers._download_buttons()` | Botón "Descargar <documento>" por fuente | No |
+| `COMPANY_NAME` (`bot.company_name`) | `NubeVerde` | `messages.start_text()`, desde `BotHandlers` | Empresa que nombra la bienvenida de `/start`; vacío (o `none` en el entorno) = saludo sin nombre | No |
 
 ### Lo que no tiene variable propia
 

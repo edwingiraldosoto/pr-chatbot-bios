@@ -12,7 +12,7 @@
 | Claude Code (CLI en Windows, con la extensión de VS Code para ver los cambios) | Claude Opus 5.5 (`claude-opus-5-5`); Claude Code 2.1.319 al cierre | Leer el enunciado, proponer el diseño, redactar los artefactos de Spec Kit, escribir el código y las pruebas, correr la verificación, depurar con el bot real, redactar la documentación | Todas |
 | Subagente de Claude Code (agente nuevo, sin el contexto de la conversación) | El mismo modelo | Revisar el repositorio contra la rúbrica como lo haría un evaluador | Después de S2 |
 | GitHub Spec Kit (`specify-cli`) | 1.3.3, integración de Claude Code (comandos `/speckit-*` en `.claude/skills/`) | Flujo constitution → specify → plan → tasks y plantillas de los artefactos de `specs/` | Especificación |
-| Chat de Claude (sesión previa, fuera del repositorio) | — | Notas de diseño iniciales (`prueba-tecnica-nubeverde-diseno.md`) | Antes de empezar |
+| Chat de Claude (sesión previa, fuera del repositorio) | — | Notas de diseño iniciales (un documento propio, fuera del repositorio) | Antes de empezar |
 | API de Anthropic (modelo del producto, no herramienta de desarrollo) | Claude Haiku 5.5 (`claude-haiku-5-5`), SDK `anthropic` 2.6 | Es el modelo que responde en el bot; aparece aquí porque la evaluación (`scripts/evaluate.py`) lo usa para medir la calidad | Evaluación |
 
 No usé autocompletado en el editor ni otros asistentes. Los documentos de ejemplo de
@@ -454,6 +454,15 @@ y se leyó con naturalidad (registrada en `docs/EVALUACION.md`, sección de acce
 - El costo por consulta usa los tokens medidos por tipo de consulta, no una estimación de
   tamaño del prompt.
 
+### 2026-11-07 — Nombre de la empresa en los documentos de ejemplo (T-11)
+
+A mitad del proyecto cambié el nombre de la empresa de los documentos de ejemplo por el de
+la empresa que evalúa la prueba (`8031edb`). Al releer el enunciado vi que §8 pide
+documentos *"ficticios de una empresa imaginaria"*, así que volví a la empresa ficticia
+(`5f652d0`). Fue un error mío al leer el enunciado y lo corregí antes de entregar. La
+evaluación se repitió con los documentos finales (ver la entrada siguiente y
+`docs/EVALUACION.md`).
+
 ### 2026-11-07 — Repetición de la evaluación
 
 Repetí la evaluación y falló un seguimiento (`seg_portatil`)
@@ -537,3 +546,33 @@ Resultados tal cual:
   - fijar el tope de gasto en la consola de Anthropic;
   - revisar con sus palabras `CRITERIO_TECNICO.md` y esta página;
   - hacer el push y dar acceso a luis.sanchez@grupobios.co si el repositorio es privado.
+
+### 2026-11-08 — Revisión contra el enunciado, nombre unificado y Docker (T-56)
+
+**Qué pedí a Claude Code (Opus 5.5)**: que el nombre de la empresa quedara igual en todo el
+repositorio, que el contenedor de Docker arrancara solo y tuviera nombres de NubeVerde, y
+que comparara la entrega con cada punto del enunciado.
+
+**Qué se hizo**:
+- El nombre aparecía escrito de tres formas (Nubeverde, Nube Verde, NubeVerde) y se unificó
+  como NubeVerde. El PDF y el DOCX se regeneraron con `python -m scripts.build_sample_docs`.
+- La comparación con el enunciado encontró que la bienvenida tenía el nombre de la empresa
+  escrito en el código. Como el evaluador probará con sus propios documentos (§8) y todo
+  debe ajustarse sin tocar código (§4.1), ahora sale de `COMPANY_NAME`. Las pruebas se
+  escribieron antes que el código y fallaron hasta implementarlo.
+- `compose.yaml` tiene un nombre de proyecto fijo (`pr-chatbot-nubeverde`), así que los
+  nombres que muestra Docker no dependen de la carpeta, y `restart: always`, para que el bot
+  arranque solo cada vez que inicia Docker.
+- Se repitió la evaluación completa: 30 de 30 (`docs/EVALUACION.md`).
+
+**Qué corregí de la herramienta**:
+- El primer reemplazo automático del nombre también cambió un correo de contacto real y
+  dejó frases sin sentido en la bitácora. Le pedí conservar el correo original y reescribir
+  esas frases.
+- Una prueba del saludo quedó comprobando lo contrario de lo que buscaba. La rehízo para
+  comprobar que el saludo nombra la empresa configurada.
+- Yo mismo corregí en el README a quién va dirigida la prueba, porque el reemplazo había
+  puesto ahí el nombre de la empresa ficticia.
+
+**Qué verifiqué**: el bot funcionando en Docker y respondiendo en Telegram, las pruebas,
+ruff, mypy y un nuevo escaneo de secretos con gitleaks sobre todo el historial.
