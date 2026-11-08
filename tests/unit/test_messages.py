@@ -25,10 +25,19 @@ def utf16(text: str) -> int:
 # --- Textos ---------------------------------------------------------------------------------
 
 
-def test_welcome_names_the_fictional_company_of_the_sample_documents() -> None:
-    # CA-06.1: el saludo nombra la misma empresa que los documentos de ejemplo.
-    assert messages.START.startswith("Hola. Soy el asistente de la mesa de ayuda NubeVerde.")
-    assert "NubeVerde" in messages.START
+def test_welcome_names_the_configured_company() -> None:
+    # CA-06.1: el saludo nombra la empresa de COMPANY_NAME (NubeVerde en los ejemplos).
+    text = messages.start_text("NubeVerde")
+    assert text.startswith("Hola. Soy el asistente de la mesa de ayuda NubeVerde.\n\n")
+    assert "/help" in text
+
+
+def test_welcome_without_company_is_generic() -> None:
+    # Con COMPANY_NAME vacío el saludo no nombra ninguna empresa ni deja un espacio suelto.
+    text = messages.start_text("")
+    assert text.startswith("Hola. Soy el asistente de la mesa de ayuda.\n\n")
+    assert text == messages.START
+    assert messages.start_text("   ") == text
 
 
 def test_admin_commands_only_in_the_admin_help() -> None:

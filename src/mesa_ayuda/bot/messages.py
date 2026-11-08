@@ -15,14 +15,28 @@ from mesa_ayuda.storage import InvitedUser
 
 TELEGRAM_LIMIT = 4096  # caracteres por mensaje, medidos en unidades UTF-16
 
-START = (
-    "Hola. Soy el asistente de la mesa de ayuda NubeVerde.\n\n"
+_START_BODY = (
     "Respondo preguntas sobre los documentos internos de la empresa: políticas, "
     "procedimientos y guías. Solo uso esos documentos; si algo no está en ellos, te lo digo.\n\n"
     "Escríbeme tu pregunta como se la harías a un compañero. Por ejemplo: "
     "¿Cuántos días de vacaciones tengo?\n\n"
     "Usa /help para ver cómo preguntar y los comandos disponibles."
 )
+
+
+def start_text(company_name: str) -> str:
+    """Bienvenida de ``/start`` (CA-06.1) con la empresa de ``COMPANY_NAME``.
+
+    El nombre sale de la configuración porque el evaluador probará con documentos de su
+    propia organización. Vacío, el saludo queda genérico, sin un espacio suelto.
+    """
+    name = company_name.strip()
+    desk = f"la mesa de ayuda {name}" if name else "la mesa de ayuda"
+    return f"Hola. Soy el asistente de {desk}.\n\n{_START_BODY}"
+
+
+#: Bienvenida sin nombre de empresa; la del bot la arma ``BotHandlers`` con ``COMPANY_NAME``.
+START = start_text("")
 
 _HELP_BODY = (
     "Cómo preguntar:\n"

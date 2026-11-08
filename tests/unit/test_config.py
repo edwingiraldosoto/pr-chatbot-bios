@@ -330,6 +330,30 @@ def test_invite_code_is_optional_secret_and_validated(
             load_settings(config_dir / "config.yaml", env_file=None)
 
 
+def test_company_name_default_override_and_limits(
+    secrets_env: dict[str, str], config_dir: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # CA-06.1: el saludo nombra la empresa configurada; otra organización solo cambia el valor.
+    assert load_settings(config_dir / "config.yaml", env_file=None).company_name == "NubeVerde"
+
+    write_yaml(config_dir, {"bot": {"company_name": "  Mesa   Central  "}})
+    assert load_settings(config_dir / "config.yaml", env_file=None).company_name == "Mesa Central"
+
+    write_yaml(config_dir, {"bot": {"company_name": ""}})
+    assert load_settings(config_dir / "config.yaml", env_file=None).company_name == ""
+
+    monkeypatch.setenv("COMPANY_NAME", "Otra Empresa")
+    assert load_settings(config_dir / "config.yaml", env_file=None).company_name == "Otra Empresa"
+
+    # En el entorno no se puede escribir vacío (se ignora); "none" deja el saludo sin nombre.
+    monkeypatch.setenv("COMPANY_NAME", "none")
+    assert load_settings(config_dir / "config.yaml", env_file=None).company_name == ""
+
+    monkeypatch.setenv("COMPANY_NAME", "x" * 61)
+    with pytest.raises(ConfigError, match="COMPANY_NAME"):
+        load_settings(config_dir / "config.yaml", env_file=None)
+
+
 def test_invite_code_in_yaml_is_rejected(secrets_env: dict[str, str], config_dir: Path) -> None:
     (config_dir / "config.yaml").write_text("invite_code: nubeverde-evaluacion-7Kq2xZ\n", "utf-8")
 

@@ -94,9 +94,11 @@ def make_handlers(
     typing_interval: float = 4.0,
     invite_code: str | None = None,
     knowledge_base: Path | None = None,
+    company_name: str = "",
     **limits: int,
 ) -> BotHandlers:
     return BotHandlers(
+        company_name=company_name,
         access=AccessControl(allowed=[USER], admins=[ADMIN]),
         limiter=RateLimiter(limit),
         storage=storage,
@@ -123,6 +125,16 @@ async def bot(storage: Storage, index: FakeIndex) -> AsyncIterator[TelegramHarne
 async def test_start_welcomes(bot: TelegramHarness) -> None:
     # CA-06.1
     assert await bot.send(USER, "/start") == [messages.START]
+
+
+async def test_start_names_the_configured_company(storage: Storage, index: FakeIndex) -> None:
+    # CA-06.1: /start y la entrada con el enlace de invitación usan el nombre de COMPANY_NAME.
+    code = "acme-evaluacion-7Kq2xZ"
+    handlers = make_handlers(storage, index, company_name="Acme Ficticia", invite_code=code)
+    async with TelegramHarness(handlers) as bot:
+        welcome = [messages.start_text("Acme Ficticia")]
+        assert await bot.send(USER, "/start") == welcome
+        assert await bot.send(STRANGER, f"/start {code}") == welcome
 
 
 async def test_help_shows_admin_commands_only_to_admins(bot: TelegramHarness) -> None:

@@ -115,6 +115,7 @@ def build(
         notify_admins=settings.reindex_notify_admins,
         knowledge_base=settings.knowledge_base_path,
         source_download=settings.source_download,
+        company_name=settings.company_name,
     )
     application: AnyApplication = (
         Application.builder()

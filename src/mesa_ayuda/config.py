@@ -85,6 +85,7 @@ YAML_PATHS: dict[str, tuple[str, str]] = {
     "reindex_notify_admins": ("reindex", "notify_admins"),
     "injection_check": ("ingest", "injection_check"),
     "source_download": ("bot", "source_download"),
+    "company_name": ("bot", "company_name"),
 }
 
 #: Campos que nunca se aceptan desde ``config.yaml`` porque ese archivo se versiona.
@@ -276,6 +277,8 @@ class Settings(BaseSettings):
     reindex_notify_admins: bool = True
     injection_check: Literal["off", "warn", "quarantine"] = "warn"
     source_download: bool = False
+    #: Empresa que nombra la bienvenida de ``/start``; vacío = saludo sin nombre (CA-06.1).
+    company_name: str = Field("NubeVerde", max_length=60)
 
     @classmethod
     def settings_customise_sources(
@@ -313,6 +316,15 @@ class Settings(BaseSettings):
         if isinstance(value, str) and value.strip().lower() in ("", "none", "null"):
             return None
         return value
+
+    @field_validator("company_name", mode="before")
+    @classmethod
+    def _normalize_company_name(cls, value: Any) -> Any:
+        """Une los espacios repetidos; ``none`` desde el entorno deja el saludo sin nombre."""
+        if not isinstance(value, str):
+            return value
+        name = " ".join(value.split())
+        return "" if name.lower() in ("none", "null") else name
 
     @field_validator("reindex_schedule_time")
     @classmethod

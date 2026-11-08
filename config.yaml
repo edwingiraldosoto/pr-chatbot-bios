@@ -155,3 +155,6 @@ ingest:
 bot:
   # SOURCE_DOWNLOAD: botón para descargar el documento citado.
   source_download: false
+  # COMPANY_NAME: empresa que nombra la bienvenida de /start (máx. 60 caracteres).
+  # Cámbialo por el de tu organización al usar tus documentos; vacío = saludo sin nombre.
+  company_name: NubeVerde

@@ -154,6 +154,8 @@ class BotHandlers:
         daily_questions_total: Tope diario de todos (CA-R8.2); ``None`` = sin tope.
         max_question_chars: Largo máximo de una pregunta (CA-R8.3); ``None`` = sin
             límite.
+        company_name: ``COMPANY_NAME``: empresa que nombra la bienvenida; vacío = saludo
+            sin nombre (CA-06.1).
     """
 
     def __init__(
@@ -175,8 +177,10 @@ class BotHandlers:
         notify_admins: bool = True,
         knowledge_base: Path | None = None,
         source_download: bool = False,
+        company_name: str = "",
     ) -> None:
         self.access = access
+        self.welcome = messages.start_text(company_name)
         self.limiter = limiter
         self.storage = storage
         self.indexer = indexer
@@ -255,7 +259,7 @@ class BotHandlers:
                     user.id, first_name=user.first_name or "", code_hash=self._invite_hash
                 )
                 log.info("message_handled", outcome="invited")
-                await reply(message, messages.START)
+                await reply(message, self.welcome)
                 raise ApplicationHandlerStop
             log.warning("message_handled", outcome="denied", invite_attempt=payload is not None)
             await reply(message, messages.access_denied(user.id))
@@ -286,7 +290,7 @@ class BotHandlers:
 
     async def start(self, update: Update, context: Context) -> None:
         """``/start``: bienvenida (CA-06.1)."""
-        await reply(_message(update), messages.START)
+        await reply(_message(update), self.welcome)
         log.info("message_handled", outcome="command", command="start")
 
     async def help(self, update: Update, context: Context) -> None:
