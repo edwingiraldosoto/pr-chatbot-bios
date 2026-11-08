@@ -8,13 +8,19 @@
 #
 # No arranques a la vez el bot local y el contenedor con el mismo token: Telegram solo
 # permite un proceso leyendo mensajes por bot.
+#
+# El bot arranca solo: al crearlo con `up -d`, si se cae y cada vez que arranca Docker
+# (también después de detenerlo con Stop). Para apagarlo del todo: `docker compose down`.
+
+# Nombre fijo del proyecto en Docker, sin importar cómo se llame la carpeta clonada.
+name: pr-chatbot-nubeverde
 
 services:
   bot:
     build: .
     image: mesa-ayuda-nubeverde
     env_file: .env
-    restart: unless-stopped
+    restart: always
     volumes:
       # Los documentos se editan en la carpeta del equipo; /reindex los toma sin reconstruir.
       - ./knowledge_base:/app/knowledge_base:ro

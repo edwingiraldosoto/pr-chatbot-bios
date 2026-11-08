@@ -684,9 +684,10 @@ dependen del proveedor.
 
 | Clave | Valor | Efecto |
 |---|---|---|
+| `name` | `pr-chatbot-nubeverde` | Nombre del proyecto en Docker (contenedor `pr-chatbot-nubeverde-bot-1`, volumen `pr-chatbot-nubeverde_bot-data`), sin importar el nombre de la carpeta |
 | `build: .` / `image` | `mesa-ayuda-nubeverde` | Construye desde el `Dockerfile` de la raíz |
 | `env_file` | `.env` | Pasa todas las variables del `.env` **al crear** el contenedor |
-| `restart` | `unless-stopped` | Se reinicia solo si se cae, salvo que lo detengas |
+| `restart` | `always` | Arranca solo al crearlo, si se cae y cada vez que arranca Docker, aunque se haya detenido con Stop. Para apagarlo del todo: `docker compose down` |
 | `volumes` | `./knowledge_base:/app/knowledge_base:ro` | La carpeta del equipo tapa la copia de la imagen. Basta editarla y enviar `/reindex` |
 | `volumes` | `bot-data:/app/data` | Volumen con nombre: Chroma, manifest, SQLite y modelo |
 
@@ -729,9 +730,11 @@ respuesta**.
 - No corras el bot local y el contenedor a la vez con el mismo token: Telegram solo
   entrega los mensajes a un proceso.
 - La primera vez el contenedor descarga el modelo al volumen (unos 450 MB).
-- **Estado actual:** la imagen `mesa-ayuda-nubeverde` de este equipo se construyó antes de los
-  últimos cambios del 2026-11-07 (reintento de respuestas cortadas,
-  saludo). Para usarlos en Docker hay que correr `docker compose up -d --build`.
+- **Estado actual:** la imagen `mesa-ayuda-nubeverde` de este equipo se construyó el
+  2026-11-08 con el código actual. Después de cambiar el código, hay que volver a correr
+  `docker compose up -d --build`.
+- Para que el bot arranque al prender el equipo, Docker Desktop también tiene que
+  arrancar solo: *Settings → General → Start Docker Desktop when you sign in*.
 
 ---
 
