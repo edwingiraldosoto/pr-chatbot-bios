@@ -1,24 +1,25 @@
 # Evaluación del asistente
 
 > T-38, T-39, T-54 y T-55. Conjunto de 30 casos, script reproducible y calibración. Todas las
-> cifras salen de ejecuciones reales del 2026-11-07 con `claude-haiku-5-5` y el modelo de
-> embeddings local `intfloat/multilingual-e5-small`.
+> cifras salen de ejecuciones reales del 2026-11-07 y del 2026-11-08 con `claude-haiku-5-5`
+> y el modelo de embeddings local `intfloat/multilingual-e5-small`.
 
 ## Resultado
 
 La columna "Entrega" es la ejecución con la configuración y los documentos que se
 entregan: `anthropic.thinking: disabled` (T-54), reintento de respuestas cortadas (T-55) y
-documentos de la empresa ficticia NubeVerde. "Antes de T-54" es la ejecución que se
-detalla caso por caso más abajo.
+documentos de la empresa ficticia NubeVerde (detalle en
+[Ejecución de la entrega](#ejecución-de-la-entrega-2026-11-08)). "Antes de T-54" es la
+ejecución que se detalla caso por caso más abajo.
 
-| Criterio | Meta | Entrega | Después de T-54 | Antes de T-54 |
-|---|---|---|---|---|
-| SC-001 Preguntas dentro de alcance, correctas y con su fuente | ≥ 80 % | 15/15 (100 %) | 15/15 | 15/15 |
-| SC-002 Preguntas fuera de alcance que terminan en "no encontrado" | 100 % (mín. 3) | 5/5 (100 %) | 5/5 | 5/5 |
-| SC-003 Seguimientos respondidos con el contexto | 100 % (mín. 2) | 4/4 (100 %) | 4/4 | 3/4 (ver "Variación") |
-| CA-R4.3 Casos de prompt injection sin obedecer | mín. 2 (documento y mensaje) | 3/3 | 3/3 | 3/3 |
-| Reformulación sin inventar contenido | — | 3/3 | 3/3 | 3/3 |
-| SC-005 Tiempo de respuesta | < 10 s | mediana 1,2 s, máximo 2,4 s | mediana 1,5 s, máximo 3,4 s | mediana 1,3 s, máximo 2,5 s |
+| Criterio | Meta | Entrega | T-55 | Después de T-54 | Antes de T-54 |
+|---|---|---|---|---|---|
+| SC-001 Preguntas dentro de alcance, correctas y con su fuente | ≥ 80 % | 15/15 (100 %) | 15/15 | 15/15 | 15/15 |
+| SC-002 Preguntas fuera de alcance que terminan en "no encontrado" | 100 % (mín. 3) | 5/5 (100 %) | 5/5 | 5/5 | 5/5 |
+| SC-003 Seguimientos respondidos con el contexto | 100 % (mín. 2) | 4/4 (100 %) | 4/4 | 4/4 | 3/4 (ver "Variación") |
+| CA-R4.3 Casos de prompt injection sin obedecer | mín. 2 (documento y mensaje) | 3/3 | 3/3 | 3/3 | 3/3 |
+| Reformulación sin inventar contenido | — | 3/3 | 3/3 | 3/3 | 3/3 |
+| SC-005 Tiempo de respuesta | < 10 s | mediana 1,0 s, máximo 2,7 s | mediana 1,2 s, máximo 2,4 s | mediana 1,5 s, máximo 3,4 s | mediana 1,3 s, máximo 2,5 s |
 
 La fuente esperada aparece entre los 5 fragmentos recuperados en los 20 casos que deben
 responderse (en el puesto 1 en 19 y en el puesto 2 en uno).
@@ -59,8 +60,9 @@ automática solo busca textos.
 ## Resultados por caso
 
 Ejecución anterior a T-54 (umbral 0,80, top-K 5, fragmento 800 con solapamiento 150). Lo
-que cambió después está en [Repetición después de T-54](#repetición-después-de-t-54) y en
-[Ejecución de la entrega](#ejecución-de-la-entrega-t-55).
+que cambió después está en [Repetición después de T-54](#repetición-después-de-t-54),
+[Ejecución con el reintento](#ejecución-con-el-reintento-t-55) y
+[Ejecución de la entrega](#ejecución-de-la-entrega-2026-11-08).
 
 | Caso | Tipo | Resultado | Fuente citada | Mejor puntaje | Rango |
 |---|---|---|---|---|---|
@@ -165,11 +167,11 @@ cambio toca la llamada de cada respuesta, se repitió la evaluación completa co
   los 10 s de SC-005. La diferencia con la ejecución anterior (1,3 s y 2,5 s) está dentro de
   la variación de la red y la API; no la atribuyo al cambio.
 
-## Ejecución de la entrega (T-55)
+## Ejecución con el reintento (T-55)
 
 Un cambio después de la repetición anterior: una respuesta cortada por `LLM_MAX_TOKENS`
-ahora se pide de nuevo una vez
-con 1.200 tokens antes de recortarla (T-55, CA-R5.8). Se repitió la evaluación completa.
+ahora se pide de nuevo una vez con 1.200 tokens antes de recortarla (T-55, CA-R5.8). Se
+repitió la evaluación completa.
 
 - Los 30 casos pasan y el script termina con código 0. La fuente esperada quedó en el
   puesto 1 en 19 casos y en el 2 en uno (`reem_anticipo`), como en las ejecuciones
@@ -182,6 +184,26 @@ con 1.200 tokens antes de recortarla (T-55, CA-R5.8). Se repitió la evaluación
 - Consumo: 64.104 tokens de entrada y 2.450 de salida, USD 0,0064 + USD 0,0012 =
   **USD 0,0076** por los 30 casos.
 - Latencia de las 22 respuestas con contenido: mediana 1,2 s y máximo 2,4 s.
+
+## Ejecución de la entrega (2026-11-08)
+
+El nombre de la empresa se unificó como NubeVerde en los documentos de ejemplo y en el
+saludo del bot; el PDF y el DOCX se regeneraron con `python -m scripts.build_sample_docs`.
+Como cambió el texto que se indexa, se repitió la evaluación completa con
+`python -m scripts.evaluate --salida <archivo>.json` para medir también la latencia.
+
+- Los 30 casos pasan y el script termina con código 0. La fuente esperada quedó en el
+  puesto 1 en 19 casos y en el 2 en uno (`reem_anticipo`), como en las ejecuciones
+  anteriores.
+- El reintento no se activó: el caso con más salida (`seg_portatil`) usó 249 tokens de 600.
+- `ti_contrasena` remite a `clave.nubeverde.example` y `rem_wifi` nombra la VPN
+  "NubeVerde Connect", que es lo que dicen los documentos.
+- Consumo: 64.094 tokens de entrada y 2.480 de salida, USD 0,0064 + USD 0,0012 =
+  **USD 0,0076** por los 30 casos.
+- Latencia de las 22 respuestas con contenido: mediana 1,0 s y máximo 2,7 s, por debajo de
+  los 10 s de SC-005.
+- Una ejecución previa el mismo día, sin `--salida`, también pasó los 30 casos (63.924
+  tokens de entrada y 2.446 de salida); de esa no quedó la latencia.
 
 ## Prompt injection (RNF-04, CA-R4.3)
 
